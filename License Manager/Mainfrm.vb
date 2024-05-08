@@ -338,7 +338,7 @@ Public Class Mainfrm
         Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys) VALUES (@User, @Password, 0, 0, 0, 0, 0, 0, 0, 0)"
         Using cmd As New SQLiteCommand(insertQuery, conn)
             cmd.Parameters.AddWithValue("@User", NewUserName)
-            cmd.Parameters.AddWithValue("@Password", NewPassword)
+            cmd.Parameters.AddWithValue("@Password", EncodeToBase64(NewPassword))
             cmd.ExecuteNonQuery()
         End Using
 
@@ -352,7 +352,7 @@ Public Class Mainfrm
         ' Update user's password
         Dim updateQuery As String = "UPDATE Users SET Password = @Password WHERE User = @User;"
         Using cmd As New SQLiteCommand(updateQuery, conn)
-            cmd.Parameters.AddWithValue("@Password", NewPassword)
+            cmd.Parameters.AddWithValue("@Password", EncodeToBase64(NewPassword))
             cmd.Parameters.AddWithValue("@User", LbxUsers.SelectedItem.ToString())
             cmd.ExecuteNonQuery()
         End Using
@@ -476,6 +476,13 @@ Public Class Mainfrm
             Dim updatedData As List(Of EditableKeyValuePair) = CType(ClientsDataGrid.DataSource, List(Of EditableKeyValuePair))
             Dim clientId As Integer = CType(updatedData.FirstOrDefault(Function(x) x.Key = "ClientID").Value, Integer)
 
+            ' Check if the "Name" field is empty
+            Dim nameKvp = updatedData.FirstOrDefault(Function(x) x.Key = "Name")
+            If nameKvp IsNot Nothing AndAlso String.IsNullOrWhiteSpace(nameKvp.Value.ToString()) Then
+                MessageBox.Show("The Name field cannot be empty.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End If
+
             Dim transaction = conn.BeginTransaction()
 
             Try
@@ -492,10 +499,10 @@ Public Class Mainfrm
                 End If
 
                 transaction.Commit()
-                MessageBox.Show("Changes saved successfully.")
+                MessageBox.Show("Changes saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Catch ex As Exception
                 transaction.Rollback()
-                MessageBox.Show("Error applying changes: " & ex.Message)
+                MessageBox.Show("Error applying changes: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Finally
                 ' Cleanup or additional actions could be placed here if needed
             End Try

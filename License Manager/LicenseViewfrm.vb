@@ -83,11 +83,11 @@ Public Class LicenseViewfrm
                 Return
             End If
 
-            ' Retrieve the password for the selected product
-            Dim password As String = GetProductPassword(SelectedProductID)
+        ' Retrieve the password for the selected product
+        Dim password As String = GetProductPasswordByID(SelectedProductID)
 
-            ' Generate a new LicenseID
-            Dim licenseId As Guid = Guid.NewGuid
+        ' Generate a new LicenseID
+        Dim licenseId As Guid = Guid.NewGuid
 
             ' Create the license with specified parameters
             ULicense = License.[New].WithUniqueIdentifier(licenseId).As(GetLicenseType(CbxLicenseType.Text)).WithMaximumUtilization(CbxUsers.Text).WithAdditionalAttributes(AttributesDictionary).WithProductFeatures(ProductFeatureDictionary).LicensedTo(CbxCustomer.Text, TxtEMail.Text).ExpiresAt(CDate(DtpExpiration.Text)).CreateAndSignWithPrivateKey(PrivateKey, password)
@@ -335,7 +335,7 @@ Public Class LicenseViewfrm
 
         If LicenseExists(clientID, SelectedProductID) Then
             ' Get the corresponding password for the selected ProductID
-            Dim password As String = GetProductPassword(SelectedProductID)
+            Dim password As String = GetProductPasswordByID(SelectedProductID)
 
             ' Generate a new LicenseID
             Dim licenseId As Guid = Guid.NewGuid
@@ -357,7 +357,7 @@ Public Class LicenseViewfrm
             File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
 
             ' Save license information in the database or wherever necessary
-            SaveLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text))
+            UpdateLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text))
 
             UpdateClientsInfo(clientID)
 

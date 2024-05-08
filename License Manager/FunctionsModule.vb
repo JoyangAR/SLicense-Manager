@@ -159,7 +159,7 @@ Module FunctionsModule
             Dim insertProductQuery As String = "INSERT INTO Products (ProductName, ProductPassword) VALUES (@ProductName, @ProductPassword);"
             Using cmdProduct As New SQLiteCommand(insertProductQuery, conn)
                 cmdProduct.Parameters.AddWithValue("@ProductName", productName)
-                cmdProduct.Parameters.AddWithValue("@ProductPassword", productPassword)
+                cmdProduct.Parameters.AddWithValue("@ProductPassword", EncodeToBase64(productPassword))
                 cmdProduct.ExecuteNonQuery()
             End Using
 
@@ -172,14 +172,14 @@ Module FunctionsModule
                 Dim insertPrivateKeyQuery As String = "INSERT INTO PrivateKeys (ProductID, PrivateKey) VALUES (@ProductID, @PrivateKey)"
                 Using cmdPrivate As New SQLiteCommand(insertPrivateKeyQuery, conn)
                     cmdPrivate.Parameters.AddWithValue("@ProductID", productID)
-                    cmdPrivate.Parameters.AddWithValue("@PrivateKey", PrivateKey)
+                    cmdPrivate.Parameters.AddWithValue("@PrivateKey", EncodeToBase64(PrivateKey))
                     cmdPrivate.ExecuteNonQuery()
                 End Using
 
                 Dim insertPublicKeyQuery As String = "INSERT INTO PublicKeys (ProductID, PublicKey) VALUES (@ProductID, @PublicKey)"
                 Using cmdPublic As New SQLiteCommand(insertPublicKeyQuery, conn)
                     cmdPublic.Parameters.AddWithValue("@ProductID", productID)
-                    cmdPublic.Parameters.AddWithValue("@PublicKey", PublicKey)
+                    cmdPublic.Parameters.AddWithValue("@PublicKey", EncodeToBase64(PublicKey))
                     cmdPublic.ExecuteNonQuery()
                 End Using
             End Using
@@ -318,8 +318,9 @@ Module FunctionsModule
 
     Sub InsertDefaultUser()
         ' Insert a default user into the database
-        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys) VALUES ('Administrator', 'Supervisor', 1, 0, 0, 0, 0, 0, 0, 0)"
+        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys) VALUES ('Administrator', @Supervisor, 1, 0, 0, 0, 0, 0, 0, 0)"
         Using cmd As New SQLiteCommand(insertQuery, conn)
+            cmd.Parameters.AddWithValue("@Supervisor", EncodeToBase64("Supervisor"))
             cmd.ExecuteNonQuery()  ' Execute the insertion
         End Using
     End Sub
@@ -329,7 +330,7 @@ Module FunctionsModule
         Dim query As String = "SELECT * FROM Users WHERE User = @User AND Password = @Password"
         Using cmd As New SQLiteCommand(query, conn)
             cmd.Parameters.AddWithValue("@User", username)
-            cmd.Parameters.AddWithValue("@Password", password)
+            cmd.Parameters.AddWithValue("@Password", EncodeToBase64(password))
             Using reader As SQLiteDataReader = cmd.ExecuteReader()
                 If reader.Read() Then
                     SignedUser = username  ' Set the globally signed-in user
@@ -348,7 +349,7 @@ Module FunctionsModule
 
             Dim reader As SQLiteDataReader = cmd.ExecuteReader()
             If reader.Read() Then
-                PrivateKey = Convert.ToString(reader("PrivateKey"))  ' Load the private key
+                PrivateKey = DecodeFromBase64(Convert.ToString(reader("PrivateKey")))  ' Load the private key
             Else
                 MessageBox.Show("Private key not found for the selected product.")
             End If
@@ -361,7 +362,7 @@ Module FunctionsModule
 
             Dim reader As SQLiteDataReader = cmd.ExecuteReader()
             If reader.Read() Then
-                PublicKey = Convert.ToString(reader("PublicKey"))  ' Load the public key
+                PublicKey = DecodeFromBase64(Convert.ToString(reader("PublicKey")))  ' Load the public key
             Else
                 MessageBox.Show("Public key not found for the selected product.")
             End If
@@ -398,57 +399,53 @@ Module FunctionsModule
 
     Function FindAndCreateClient(clientName As String, clientemail As String) As Integer
         ' Try to find an existing client or create a new one if not found
-        Using conn As New SQLiteConnection(connectionString)
-            conn.Open()
-            Dim transaction = conn.BeginTransaction()
-            Try
-                ' Attempt to find client by name and email
-                Dim findClientQuery As String = "SELECT ClientID FROM Clients WHERE Name = @ClientName AND Email = @ClientEmail;"
-                Using cmd As New SQLiteCommand(findClientQuery, conn, transaction)
-                    cmd.Parameters.AddWithValue("@ClientName", clientName)
-                    cmd.Parameters.AddWithValue("@ClientEmail", clientemail)
-                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                        If reader.Read() Then
-                            ' Client found
-                            Dim clientId As Integer = Convert.ToInt32(reader("ClientID"))
-                            transaction.Commit()
-                            Return clientId
-                        End If
-                    End Using
+        Dim transaction = conn.BeginTransaction()
+        Try
+            ' Attempt to find client by name and email
+            Dim findClientQuery As String = "SELECT ClientID FROM Clients WHERE Name = @ClientName AND Email = @ClientEmail;"
+            Using cmd As New SQLiteCommand(findClientQuery, conn, transaction)
+                cmd.Parameters.AddWithValue("@ClientName", clientName)
+                cmd.Parameters.AddWithValue("@ClientEmail", clientemail)
+                Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                    If reader.Read() Then
+                        ' Client found
+                        Dim clientId As Integer = Convert.ToInt32(reader("ClientID"))
+                        transaction.Commit()
+                        Return clientId
+                    End If
                 End Using
+            End Using
 
-                ' Client not found, insert new client
-                Dim insertClientQuery As String = "INSERT INTO Clients (Name, Email, ProductCount, CreatedBy, CreatedTime) VALUES (@ClientName, @ClientEmail, 0, @CreatedBy, @CreatedTime); SELECT last_insert_rowid();"
-                Using insertCmd As New SQLiteCommand(insertClientQuery, conn, transaction)
-                    insertCmd.Parameters.AddWithValue("@ClientName", clientName)
-                    insertCmd.Parameters.AddWithValue("@ClientEmail", clientemail)
-                    insertCmd.Parameters.AddWithValue("@CreatedBy", SignedUser)
-                    insertCmd.Parameters.AddWithValue("@CreatedTime", DateTime.Now)
-                    Dim newClientId As Integer = Convert.ToInt32(insertCmd.ExecuteScalar())
-                    transaction.Commit()
-                    Return newClientId
-                End Using
-            Catch ex As Exception
-                transaction.Rollback()
-                Throw
-            End Try
-        End Using
+            ' Client not found, insert new client
+            Dim insertClientQuery As String = "INSERT INTO Clients (Name, Email, ProductCount, CreatedBy, CreatedTime) VALUES (@ClientName, @ClientEmail, 0, @CreatedBy, @CreatedTime); SELECT last_insert_rowid();"
+            Using insertCmd As New SQLiteCommand(insertClientQuery, conn, transaction)
+                insertCmd.Parameters.AddWithValue("@ClientName", clientName)
+                insertCmd.Parameters.AddWithValue("@ClientEmail", clientemail)
+                insertCmd.Parameters.AddWithValue("@CreatedBy", SignedUser)
+                insertCmd.Parameters.AddWithValue("@CreatedTime", DateTime.Now)
+                Dim newClientId As Integer = Convert.ToInt32(insertCmd.ExecuteScalar())
+                transaction.Commit()
+                Return newClientId
+            End Using
+        Catch ex As Exception
+            transaction.Rollback()
+            Throw
+        End Try
     End Function
 
-    Function GetProductPassword(productID As Integer) As String
+    Function GetProductPasswordByID(productID As Integer) As String
         ' Retrieve the password for a specific product
         Dim query As String = "SELECT ProductPassword FROM Products WHERE ProductID = @ProductID"
         Using cmd As New SQLiteCommand(query, conn)
             cmd.Parameters.AddWithValue("@ProductID", productID)
             Using reader As SQLiteDataReader = cmd.ExecuteReader()
                 If reader.Read() Then
-                    Return reader("ProductPassword").ToString()
+                    Return DecodeFromBase64(reader("ProductPassword").ToString())
                 End If
             End Using
         End Using
         Return String.Empty
     End Function
-
 
     Sub SaveLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date)
         ' Insert license details into the Licenses table and associated license file details into LicenseFiles table
@@ -632,6 +629,18 @@ Module FunctionsModule
 
     Public Function RemoveNonNumericCharacters(input As String) As String
         Return Regex.Replace(input, "[^\d]", "")
+    End Function
+
+    Function EncodeToBase64(ByVal input As String) As String
+        Dim bytesToEncode As Byte() = System.Text.Encoding.UTF8.GetBytes(input)
+        Dim encodedText As String = System.Convert.ToBase64String(bytesToEncode)
+        Return encodedText
+    End Function
+
+    Function DecodeFromBase64(ByVal input As String) As String
+        Dim decodedBytes As Byte() = System.Convert.FromBase64String(input)
+        Dim decodedText As String = System.Text.Encoding.UTF8.GetString(decodedBytes)
+        Return decodedText
     End Function
 
 End Module
