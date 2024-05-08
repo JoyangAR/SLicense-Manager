@@ -323,6 +323,8 @@ Module FunctionsModule
             cmd.Parameters.AddWithValue("@Supervisor", EncodeToBase64("Supervisor"))
             cmd.ExecuteNonQuery()  ' Execute the insertion
         End Using
+        MessageBox.Show("No database found. New one was created")
+        MessageBox.Show($"DEFAULTS: {vbCrLf} *Username: Administrator {vbCrLf} *Password: Supervisor")
     End Sub
 
     Function AuthenticateUser(username As String, password As String) As Boolean
