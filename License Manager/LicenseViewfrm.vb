@@ -515,7 +515,7 @@ Public Class LicenseViewfrm
             ' Prompt the user to select a location to save the license
             If sfd.ShowDialog() = DialogResult.OK Then
                 ' Save the license file at the selected location
-                System.IO.File.Copy(licenseFile, sfd.FileName, True)
+                System.IO.File.Copy(licenseFile & ".lic", sfd.FileName, True)
                 MessageBox.Show("License exported successfully.")
             Else
                 MessageBox.Show("Export cancelled.")
