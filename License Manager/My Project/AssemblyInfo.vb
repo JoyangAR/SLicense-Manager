@@ -8,11 +8,11 @@ Imports System.Runtime.InteropServices
 
 ' Die Werte der Assemblyattribute überprüfen
 
-<Assembly: AssemblyTitle("WindowsApplication1")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("WindowsApplication1")> 
-<Assembly: AssemblyCopyright("Copyright ©  2013")> 
+<Assembly: AssemblyTitle("SLicense Manager")>
+<Assembly: AssemblyDescription("Manage and distribute licenses easily using the Standard.Licenses library with this intuitive SLicense Manager.")>
+<Assembly: AssemblyCompany("JoyangAR")>
+<Assembly: AssemblyProduct("SLicense Manager")>
+<Assembly: AssemblyCopyright("Copyright ©  2024")>
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>
