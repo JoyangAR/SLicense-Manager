@@ -1,6 +1,6 @@
 # Simple VB License Manager
 
-Welcome to the Simple VB License Manager repository! This application is crafted for developers or any individual interested in creating, organizing, and distributing license files for applications using the **Standard.Licensing** library. It streamlines the process of license management, making it intuitive and straightforward for anyone, regardless of the scale of their project.
+Welcome to the Simple VB License Manager repository! This application is crafted for developers or any individual interested in creating, organizing, and distributing license files for applications using the **[Standard.Licensing](https://github.com/junian/Standard.Licensing/blob/master/docs/README.md)** library. It streamlines the process of license management, making it intuitive and straightforward for anyone, regardless of the scale of their project.
 
 ## Features
 
@@ -14,6 +14,7 @@ Welcome to the Simple VB License Manager repository! This application is crafted
 Before you get started, ensure you have the following installed:
 - [.NET Framework](https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net40) (Version 4.0 or later)
 - [SQLite](https://www.sqlite.org/index.html) for managing the application's database.
+- [Standard.Licensing](https://github.com/junian/Standard.Licensing/blob/master/docs/README.md) for managing licenses.
 
 ## Installation
 
