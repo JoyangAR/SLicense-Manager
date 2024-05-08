@@ -1,6 +1,6 @@
-# Simple VB License Manager
+# SLicense Manager
 
-Welcome to the Simple VB License Manager repository! This application is crafted for developers or any individual interested in creating, organizing, and distributing license files for applications using the **[Standard.Licensing](https://github.com/junian/Standard.Licensing/blob/master/docs/README.md)** library. It streamlines the process of license management, making it intuitive and straightforward for anyone, regardless of the scale of their project.
+Welcome to the SLicense Manager repository! This application is crafted for developers or any individual interested in creating, organizing, and distributing license files for applications using the **[Standard.Licensing](https://github.com/junian/Standard.Licensing/blob/master/docs/README.md)** library. It streamlines the process of license management, making it intuitive and straightforward for anyone, regardless of the scale of their project.
 
 ## Features
 
