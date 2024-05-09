@@ -6,22 +6,26 @@ Imports System.Windows.Forms
 Imports Standard.Licensing
 
 Public Class LicenseViewfrm
+    Private Ulicense As License
+    Private PrivateKey As String
+    Private PublicKey As String
     Dim AttributesDictionary As Dictionary(Of String, String)
     Dim ProductFeatureDictionary As New Dictionary(Of String, String)
     Private AllProductClients As New List(Of Object)
+    Public CurrentProductID As Integer
     Private Sub Mainfrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        LoadKeysFromDatabase()           ' Loads cryptographic keys for the selected product from the database.
+        PublicKey = LoadPublicKeyFromDatabase(CurrentProductID)           ' Loads cryptographic keys for the selected product from the database.
+        PrivateKey = LoadPrivateKeyFromDatabase(CurrentProductID)
         LoadClientNames()                ' Populates a list or control with names of clients from the database.
-        LoadFeaturesIntoLbxFeatures(SelectedProductID) ' Loads features for the selected product into a ListBox.
+        LoadFeaturesIntoLbxFeatures(CurrentProductID) ' Loads features for the selected product into a ListBox.
         InitializeProductFeatures()      ' Sets up UI components related to product features.
         FillComboBoxWithAttributes()     ' Fills a ComboBox with attribute names from the database.
         LoadClientData()                 ' Loads detailed client data into a DataGridView or another data display control.
         LoadClientsIntoComboBox()        ' Populates a ComboBox with client information for selection or filtering.
         LoadUserPermission()             ' Loads permissions for the current user and adjusts the UI accordingly.
         CbxUsers.SelectedIndex = 0
-        ' Configuración inicial del VScrollBar
         VscrlUsers.Minimum = 1
-        VscrlUsers.Maximum = 10000  ' Ajusta esto según el rango que esperas
+        VscrlUsers.Maximum = 10000
         VscrlUsers.Value = 1
     End Sub
 
@@ -56,7 +60,7 @@ Public Class LicenseViewfrm
 
         Dim query As String = "SELECT DISTINCT Clients.ClientID, Clients.Name FROM Clients JOIN Licenses ON Clients.ClientID = Licenses.ClientID WHERE Licenses.ProductID = @ProductID;"
         Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)
+            cmd.Parameters.AddWithValue("@ProductID", CurrentProductID)
             Using reader As SQLiteDataReader = cmd.ExecuteReader()
                 While reader.Read()
                     Dim clientID As Integer = Convert.ToInt32(reader("ClientID"))
@@ -78,46 +82,59 @@ Public Class LicenseViewfrm
         ' Obtain ClientID and check if a license already exists
         Dim clientID As Integer = FindAndCreateClient(CbxCustomer.Text, TxtEMail.Text)
 
-            If LicenseExists(clientID, SelectedProductID) Then
-                MessageBox.Show("A license for this client and product already exists.", "License Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                Return
-            End If
+        If LicenseExists(clientID, CurrentProductID) Then
+            MessageBox.Show("A license for this client and product already exists.", "License Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
 
         ' Retrieve the password for the selected product
-        Dim password As String = GetProductPasswordByID(SelectedProductID)
-
+        Dim productpassword As String = GetProductPasswordByID(CurrentProductID)
+        Debug.WriteLine(productpassword)
         ' Generate a new LicenseID
         Dim licenseId As Guid = Guid.NewGuid
 
-            ' Create the license with specified parameters
-            ULicense = License.[New].WithUniqueIdentifier(licenseId).As(GetLicenseType(CbxLicenseType.Text)).WithMaximumUtilization(CbxUsers.Text).WithAdditionalAttributes(AttributesDictionary).WithProductFeatures(ProductFeatureDictionary).LicensedTo(CbxCustomer.Text, TxtEMail.Text).ExpiresAt(CDate(DtpExpiration.Text)).CreateAndSignWithPrivateKey(PrivateKey, password)
+        ' Create the license with specified parameters
+        Try
+            ULicense = License.[New]() _
+        .WithUniqueIdentifier(licenseId) _
+        .As(GetLicenseType(CbxLicenseType.Text)) _
+        .WithMaximumUtilization(CbxUsers.Text) _
+        .WithAdditionalAttributes(AttributesDictionary) _
+        .WithProductFeatures(ProductFeatureDictionary) _
+        .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
+        .ExpiresAt(CDate(DtpExpiration.Text)) _
+        .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
+        Catch ex As Exception
+            MessageBox.Show("Error signing the license: " & ex.Message)
+            Return
+        End Try
 
-            ' Convert Guid to bytes and then to Base64
-            Dim licenseIdBytes As Byte() = licenseId.ToByteArray()
-            Dim base64LicenseId As String = Convert.ToBase64String(licenseIdBytes)
-            base64LicenseId = base64LicenseId.Replace("/", "_").Replace("+", "-")  ' Adjust for filename compatibility
+        ' Convert Guid to bytes and then to Base64
+        Dim licenseIdBytes As Byte() = licenseId.ToByteArray()
+        Dim base64LicenseId As String = Convert.ToBase64String(licenseIdBytes)
+        base64LicenseId = base64LicenseId.Replace("/", "_").Replace("+", "-")  ' Adjust for filename compatibility
 
-            ' Prepare the license file name
-            Dim licenseFileName As String = Path.Combine(LicenseDirectory, base64LicenseId + ".lic")
+        ' Prepare the license file name
+        Dim licenseFileName As String = Path.Combine(LicenseDirectory, base64LicenseId + ".lic")
 
-            ' Save the license to a file
-            File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
+        ' Save the license to a file
+        File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
 
-            ' Save license info in the database or required location
-            SaveLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text))
+        ' Save license info in the database or required location
+        SaveLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
 
-            ' Update client information if needed
-            UpdateClientsInfo(clientID)
+        ' Update client information if needed
+        UpdateClientsInfo(clientID)
 
-            ' Refresh client list
-            LoadClientNames()
+        ' Refresh client list
+        LoadClientNames()
     End Sub
 
 
 
     Private Sub FillComboBoxWithAttributes()
         ' Load attribute dictionary for the selected product
-        AttributesDictionary = GetAttributesDictionary(SelectedProductID)
+        AttributesDictionary = GetAttributesDictionary(CurrentProductID)
 
         ' Clear existing items and fill the ComboBox with attribute names
         CbxAttributes.Items.Clear()
@@ -184,7 +201,7 @@ Public Class LicenseViewfrm
         End If
 
         ' Get the license ID using the client ID
-        Dim licenseID As String = GetLicenseIDByClientID(clientID)
+        Dim licenseID As String = GetLicenseIDByClientID(clientID, CurrentProductID)
         If String.IsNullOrEmpty(licenseID) Then
             MessageBox.Show("License ID not found for the selected client.")
             Return
@@ -216,7 +233,7 @@ Public Class LicenseViewfrm
 
                 ' Populate features list and select corresponding items
                 SelectFeatures()
-                TxtValidation.Text = ValidateLicense(ULicense).ToString
+                TxtValidation.Text = ValidateLicense(ULicense, PublicKey).ToString
             End If
         Catch Ex As Exception
             MessageBox.Show("Cannot read file from disk. Original error: " & Ex.Message)
@@ -333,15 +350,28 @@ Public Class LicenseViewfrm
         ' Get ClientID and check if a license already exists for this client and product
         Dim clientID As Integer = FindAndCreateClient(CbxCustomer.Text, TxtEMail.Text)
 
-        If LicenseExists(clientID, SelectedProductID) Then
+        If LicenseExists(clientID, CurrentProductID) Then
             ' Get the corresponding password for the selected ProductID
-            Dim password As String = GetProductPasswordByID(SelectedProductID)
+            Dim productpassword As String = GetProductPasswordByID(CurrentProductID)
 
             ' Generate a new LicenseID
             Dim licenseId As Guid = Guid.NewGuid
 
-            ' Create the license
-            ULicense = License.[New].WithUniqueIdentifier(licenseId).As(GetLicenseType(CbxLicenseType.Text)).WithMaximumUtilization(CbxUsers.Text).WithAdditionalAttributes(AttributesDictionary).WithProductFeatures(ProductFeatureDictionary).LicensedTo(CbxCustomer.Text, TxtEMail.Text).ExpiresAt(CDate(DtpExpiration.Text)).CreateAndSignWithPrivateKey(PrivateKey, password)
+            ' Create the license with specified parameters
+            Try
+                Ulicense = License.[New]() _
+        .WithUniqueIdentifier(licenseId) _
+        .As(GetLicenseType(CbxLicenseType.Text)) _
+        .WithMaximumUtilization(CbxUsers.Text) _
+        .WithAdditionalAttributes(AttributesDictionary) _
+        .WithProductFeatures(ProductFeatureDictionary) _
+        .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
+        .ExpiresAt(CDate(DtpExpiration.Text)) _
+        .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
+            Catch ex As Exception
+                MessageBox.Show("Error signing the license: " & ex.Message)
+                Return
+            End Try
 
             ' Convert Guid to bytes and then to Base64
             Dim licenseIdBytes As Byte() = licenseId.ToByteArray()
@@ -357,7 +387,7 @@ Public Class LicenseViewfrm
             File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
 
             ' Save license information in the database or wherever necessary
-            UpdateLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text))
+            UpdateLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
 
             UpdateClientsInfo(clientID)
 
@@ -367,18 +397,18 @@ Public Class LicenseViewfrm
         End If
     End Sub
 
-    Private Sub cmbUsers_KeyPress(sender As Object, e As KeyPressEventArgs) Handles CbxUsers.KeyPress
+    Private Sub CbxUsers_KeyPress(sender As Object, e As KeyPressEventArgs) Handles CbxUsers.KeyPress
         ' Allow only numbers, keyboard controls and backspace
         If Not Char.IsDigit(e.KeyChar) AndAlso Not Char.IsControl(e.KeyChar) AndAlso e.KeyChar <> ChrW(Keys.Back) Then
             e.Handled = True  ' Ignora el caracter si no es número, control o backspace
         End If
 
-        ' Prevenir first character from being 0
+        ' Prevent first character from being 0
         If CbxUsers.Text.Length = 0 AndAlso e.KeyChar = "0"c Then
             e.Handled = True
         End If
 
-        ' Prevenir leaving the combobox empty
+        ' Prevent leaving the combobox empty
         If e.KeyChar = ChrW(Keys.Back) AndAlso CbxUsers.Text.Length = 1 Then
             e.Handled = True
         End If
@@ -400,7 +430,7 @@ Public Class LicenseViewfrm
         End If
     End Sub
 
-    Private Sub CmbUsers_TextChanged(sender As Object, e As EventArgs) Handles CbxUsers.TextChanged
+    Private Sub CbxUsers_TextChanged(sender As Object, e As EventArgs) Handles CbxUsers.TextChanged
         Dim currentValue As Integer
         If Integer.TryParse(CbxUsers.Text, currentValue) Then
             ' Refresh scrolvar's value
@@ -497,7 +527,7 @@ Public Class LicenseViewfrm
             Return
         End If
 
-        Dim licenseID As String = GetLicenseIDByClientID(clientID)
+        Dim licenseID As String = GetLicenseIDByClientID(clientID, CurrentProductID)
         If String.IsNullOrEmpty(licenseID) Then
             MessageBox.Show("License ID not found for the selected client.")
             Return

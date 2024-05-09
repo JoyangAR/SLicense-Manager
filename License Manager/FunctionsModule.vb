@@ -7,16 +7,11 @@ Imports Standard.Licensing.Validation
 Module FunctionsModule
 
     Public AppDirectory As String = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
-
     Public LicenseDirectory As String = Path.Combine(AppDirectory, "LicenseFiles")
-
     Public dbFileName As String = Path.Combine(AppDirectory, "StandardLM.db")
     Public connectionString As String = $"Data Source={dbFileName};Version=3;"
-    Public ULicense As License
 
-    Public PrivateKey As String
-    Public PublicKey As String
-    Public SelectedProductID As Integer
+
     Public SignedUser As String
 
     Public isAdmin As Boolean
@@ -52,8 +47,7 @@ Module FunctionsModule
 
     End Function
 
-
-    Function ValidateLicense(ByVal license As License) As String
+    Function ValidateLicense(ByVal license As License, PublicKey As String) As String
         ' Validate license and define return value
 
         Dim ReturnValue As String = "License is Valid"
@@ -130,6 +124,7 @@ Module FunctionsModule
     End Sub
 
     Sub InsertNewProduct()
+        Dim publickey, privatekey As String
         ' Initialize the form for new product details
         Dim NewProduct As New NewProductfrm
         NewProduct.Text = "Enter Product Details"
@@ -147,13 +142,13 @@ Module FunctionsModule
             End If
 
             ' Generate encryption keys for the product
-            Dim KeyGenerator = Standard.Licensing.Security.Cryptography.KeyGenerator.Create()
+            Dim KeyGenerator = Security.Cryptography.KeyGenerator.Create()
             Dim KeyPair = KeyGenerator.GenerateKeyPair()
 
             ' Encrypt and store the private key using the product password
-            PrivateKey = KeyPair.ToEncryptedPrivateKeyString(productPassword.Trim())
+            privatekey = KeyPair.ToEncryptedPrivateKeyString(productPassword.Trim())
             ' Store the public key in plain format
-            PublicKey = KeyPair.ToPublicKeyString()
+            publickey = KeyPair.ToPublicKeyString()
 
             ' Insert the new product into the database
             Dim insertProductQuery As String = "INSERT INTO Products (ProductName, ProductPassword) VALUES (@ProductName, @ProductPassword);"
@@ -172,14 +167,14 @@ Module FunctionsModule
                 Dim insertPrivateKeyQuery As String = "INSERT INTO PrivateKeys (ProductID, PrivateKey) VALUES (@ProductID, @PrivateKey)"
                 Using cmdPrivate As New SQLiteCommand(insertPrivateKeyQuery, conn)
                     cmdPrivate.Parameters.AddWithValue("@ProductID", productID)
-                    cmdPrivate.Parameters.AddWithValue("@PrivateKey", EncodeToBase64(PrivateKey))
+                    cmdPrivate.Parameters.AddWithValue("@PrivateKey", EncodeToBase64(privatekey))
                     cmdPrivate.ExecuteNonQuery()
                 End Using
 
                 Dim insertPublicKeyQuery As String = "INSERT INTO PublicKeys (ProductID, PublicKey) VALUES (@ProductID, @PublicKey)"
                 Using cmdPublic As New SQLiteCommand(insertPublicKeyQuery, conn)
                     cmdPublic.Parameters.AddWithValue("@ProductID", productID)
-                    cmdPublic.Parameters.AddWithValue("@PublicKey", EncodeToBase64(PublicKey))
+                    cmdPublic.Parameters.AddWithValue("@PublicKey", EncodeToBase64(publickey))
                     cmdPublic.ExecuteNonQuery()
                 End Using
             End Using
@@ -188,7 +183,6 @@ Module FunctionsModule
             MessageBox.Show("Operation cancelled or input was invalid.", "Operation Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
     End Sub
-
 
     Function ProductExists(productName As String) As Boolean
         ' Check if a product already exists in the database by name
@@ -231,7 +225,6 @@ Module FunctionsModule
             Return result > 0
         End Using
     End Function
-
     Function GetProductIDByProductName(productName As String) As Integer
         ' Retrieve the ProductID based on product name
         Dim query As String = "SELECT ProductID FROM Products WHERE ProductName = @ProductName"
@@ -306,7 +299,6 @@ Module FunctionsModule
         End Using
     End Function
 
-
     Sub CheckDatabase()
         ' Verify if the database file exists and create it if it does not
         If Not File.Exists(dbFileName) Then
@@ -343,34 +335,41 @@ Module FunctionsModule
         Return False  ' User not found
     End Function
 
-    Sub LoadKeysFromDatabase()
+    Function LoadPrivateKeyFromDatabase(ByRef productid As Integer) As String
+        Dim privatekey As String
         ' Load keys based on the SelectedProductID
         Dim query As String = "SELECT PrivateKey FROM PrivateKeys WHERE ProductID = @ProductID"
         Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)  ' Ensure the correct ProductID is used
+            cmd.Parameters.AddWithValue("@ProductID", productid)  ' Ensure the correct ProductID is used
 
             Dim reader As SQLiteDataReader = cmd.ExecuteReader()
             If reader.Read() Then
-                PrivateKey = DecodeFromBase64(Convert.ToString(reader("PrivateKey")))  ' Load the private key
+                privatekey = DecodeFromBase64(Convert.ToString(reader("PrivateKey")))  ' Load the private key
+                Return privatekey
             Else
                 MessageBox.Show("Private key not found for the selected product.")
+                Return ""
             End If
         End Using
-
+    End Function
+    Function LoadPublicKeyFromDatabase(ByRef productid As Integer) As String
+        Dim publickey As String
         ' Load the public key in a similar manner
-        query = "SELECT PublicKey FROM PublicKeys WHERE ProductID = @ProductID"
+        Dim query As String = "SELECT PublicKey FROM PublicKeys WHERE ProductID = @ProductID"
+
         Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)
+            cmd.Parameters.AddWithValue("@ProductID", productid)
 
             Dim reader As SQLiteDataReader = cmd.ExecuteReader()
             If reader.Read() Then
-                PublicKey = DecodeFromBase64(Convert.ToString(reader("PublicKey")))  ' Load the public key
+                publickey = DecodeFromBase64(Convert.ToString(reader("PublicKey")))  ' Load the public key
+                Return publickey
             Else
                 MessageBox.Show("Public key not found for the selected product.")
+                Return ""
             End If
         End Using
-    End Sub
-
+    End Function
 
     Function LicenseExists(clientID As Integer, productID As Integer) As Boolean
         ' Check if a license already exists for a given client and product
@@ -449,14 +448,14 @@ Module FunctionsModule
         Return String.Empty
     End Function
 
-    Sub SaveLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date)
+    Sub SaveLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date, productid As Integer)
         ' Insert license details into the Licenses table and associated license file details into LicenseFiles table
         Dim queryLicenses As String = "INSERT INTO Licenses (LicenseID, ClientID, ProductID, CreatedBy, IssueDate, Expiration) VALUES (@LicenseID, @ClientID, @ProductID, @CreatedBy, @IssueDate, @Expiration);"
         Dim queryLicenseFiles As String = "INSERT INTO LicenseFiles (LicenseID, LicenseFile) VALUES (@LicenseID, @LicenseFile);"
         Using cmd As New SQLiteCommand(queryLicenses, conn)
             cmd.Parameters.AddWithValue("@LicenseID", licenseId)
             cmd.Parameters.AddWithValue("@ClientID", clientId)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)
+            cmd.Parameters.AddWithValue("@ProductID", productid)
             cmd.Parameters.AddWithValue("@CreatedBy", SignedUser)
             cmd.Parameters.AddWithValue("@IssueDate", DateTime.Now)
             cmd.Parameters.AddWithValue("@Expiration", ExpiresAt)
@@ -498,12 +497,12 @@ Module FunctionsModule
         End Using
     End Function
 
-    Function GetLicenseIDByClientID(clientID As Integer) As String
-        ' Fetch the LicenseID for a given ClientID and SelectedProductID
+    Function GetLicenseIDByClientID(clientID As Integer, productid As Integer) As String
+        ' Fetch the LicenseID for a given ClientID and ProductID
         Dim query As String = "SELECT LicenseID FROM Licenses WHERE ClientID = @ClientID AND ProductID = @ProductID"
         Using cmd As New SQLiteCommand(query, conn)
             cmd.Parameters.AddWithValue("@ClientID", clientID)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)
+            cmd.Parameters.AddWithValue("@ProductID", productid)
             Dim result = cmd.ExecuteScalar()
             If result IsNot Nothing Then
                 Return result.ToString()
@@ -527,14 +526,14 @@ Module FunctionsModule
         End Using
     End Function
 
-    Sub UpdateLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date)
+    Sub UpdateLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date, productid As Integer)
         ' Update license information in the Licenses table and insert the new license file
         Dim queryLicenses As String = "UPDATE Licenses SET LicenseID = @LicenseID, ProductID = @ProductID, CreatedBy = @CreatedBy, IssueDate = @IssueDate, Expiration = @Expiration WHERE ClientID = @ClientID;"
         Dim queryLicenseFiles As String = "INSERT INTO LicenseFiles (LicenseID, LicenseFile) VALUES (@LicenseID, @LicenseFile);"
         Using cmd As New SQLiteCommand(queryLicenses, conn)
             cmd.Parameters.AddWithValue("@LicenseID", licenseId)
             cmd.Parameters.AddWithValue("@ClientID", clientId)
-            cmd.Parameters.AddWithValue("@ProductID", SelectedProductID)
+            cmd.Parameters.AddWithValue("@ProductID", productid)
             cmd.Parameters.AddWithValue("@CreatedBy", SignedUser)
             cmd.Parameters.AddWithValue("@IssueDate", DateTime.Now)
             cmd.Parameters.AddWithValue("@Expiration", ExpiresAt)

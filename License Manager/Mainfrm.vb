@@ -112,10 +112,11 @@ Public Class Mainfrm
     Private Sub LbxProducts_DoubleClick(sender As Object, e As EventArgs) Handles LbxProducts.DoubleClick
         If LbxProducts.SelectedIndex <> -1 Then
             Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
-            SelectedProductID = selectedProduct.ID
+
             ' Open a new form to view and possibly edit the product details
             Dim LicenseView As New LicenseViewfrm()
             LicenseView.Text = selectedProduct.name
+            LicenseView.CurrentProductID = selectedProduct.ID
             LicenseView.Show()
         Else
             MessageBox.Show("Please select a product from the list.")
