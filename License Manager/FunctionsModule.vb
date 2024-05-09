@@ -528,7 +528,7 @@ Module FunctionsModule
 
     Sub UpdateLicenseInfo(licenseId As String, clientId As Integer, licenseFileName As String, ExpiresAt As Date, productid As Integer)
         ' Update license information in the Licenses table and insert the new license file
-        Dim queryLicenses As String = "UPDATE Licenses SET LicenseID = @LicenseID, ProductID = @ProductID, CreatedBy = @CreatedBy, IssueDate = @IssueDate, Expiration = @Expiration WHERE ClientID = @ClientID;"
+        Dim queryLicenses As String = "UPDATE Licenses SET LicenseID = @LicenseID, ProductID = @ProductID, CreatedBy = @CreatedBy, IssueDate = @IssueDate, Expiration = @Expiration WHERE ClientID = @ClientID AND ProductID = @ProductID;"
         Dim queryLicenseFiles As String = "INSERT INTO LicenseFiles (LicenseID, LicenseFile) VALUES (@LicenseID, @LicenseFile);"
         Using cmd As New SQLiteCommand(queryLicenses, conn)
             cmd.Parameters.AddWithValue("@LicenseID", licenseId)
