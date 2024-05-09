@@ -7,7 +7,7 @@ Public Class Mainfrm
 
     Private dbFileName As String = Path.Combine(AppDirectory, "StandardLM.db")
     Private connectionString As String = $"Data Source={dbFileName};Version=3;"
-    Private productIDs As New Dictionary(Of String, Integer)
+    Private AllProducts As New List(Of Object)
     Private AllClients As New List(Of Object)
 
     ' Handles the event when the MainForm is loaded.
@@ -62,6 +62,26 @@ Public Class Mainfrm
         End Using
     End Sub
 
+    ' Load product names and IDs into the LbxProducts ListBox and a dictionary.
+    Private Sub LoadProducts()
+        LbxProducts.Items.Clear()
+        AllProducts.Clear()
+
+        Dim query As String = "SELECT ProductID, ProductName FROM Products;"
+        Using cmd As New SQLiteCommand(query, conn)
+            Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                While reader.Read()
+                    Dim productID As Integer = Convert.ToInt32(reader("ProductID"))
+                    Dim productName As String = reader("ProductName").ToString()
+                    Dim product = New With {.Name = productName, .ID = productID}
+
+                    LbxProducts.Items.Add(product)
+                    AllProducts.Add(product)  ' Map productName to productID
+                End While
+            End Using
+        End Using
+    End Sub
+
     ' Custom drawing of items in LbxClients ListBox.
     Private Sub LbxClients_DrawItem(sender As Object, e As DrawItemEventArgs) Handles LbxClients.DrawItem
         e.DrawBackground()
@@ -72,24 +92,15 @@ Public Class Mainfrm
         e.DrawFocusRectangle()
     End Sub
 
-    ' Load product names and IDs into the LbxProducts ListBox and a dictionary.
-    Private Sub LoadProducts()
-        LbxProducts.Items.Clear()
-        productIDs.Clear()
-
-        Dim query As String = "SELECT ProductID, ProductName FROM Products;"
-        Using cmd As New SQLiteCommand(query, conn)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    Dim productName As String = reader("ProductName").ToString()
-                    Dim productID As Integer = Convert.ToInt32(reader("ProductID"))
-                    LbxProducts.Items.Add(productName)
-                    productIDs.Add(productName, productID)  ' Map productName to productID
-                End While
-            End Using
-        End Using
+    ' Custom drawing of items in LbxProducts ListBox.
+    Private Sub LbxProducts_DrawItem(sender As Object, e As DrawItemEventArgs) Handles LbxProducts.DrawItem
+        e.DrawBackground()
+        If e.Index >= 0 Then
+            Dim item = DirectCast(LbxProducts.Items(e.Index), Object)  ' Assume you've added the object as shown previously
+            e.Graphics.DrawString(item.Name, e.Font, Brushes.Black, e.Bounds)
+        End If
+        e.DrawFocusRectangle()
     End Sub
-
 
     ' Button click event to add a new product and refresh the product list.
     Private Sub ButtonCreate_Click(sender As Object, e As EventArgs) Handles BtnAddProduct.Click
@@ -100,16 +111,12 @@ Public Class Mainfrm
     ' Handle double-click event on the products list box to open details for the selected product.
     Private Sub LbxProducts_DoubleClick(sender As Object, e As EventArgs) Handles LbxProducts.DoubleClick
         If LbxProducts.SelectedIndex <> -1 Then
-            Dim selectedProductName As String = LbxProducts.SelectedItem.ToString()
-            If productIDs.ContainsKey(selectedProductName) Then
-                SelectedProductID = productIDs(selectedProductName)
-                ' Open a new form to view and possibly edit the product details
-                Dim LicenseView As New LicenseViewfrm()
-                LicenseView.Text = selectedProductName
-                LicenseView.Show()
-            Else
-                MessageBox.Show("Product ID not found.")
-            End If
+            Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+            SelectedProductID = selectedProduct.ID
+            ' Open a new form to view and possibly edit the product details
+            Dim LicenseView As New LicenseViewfrm()
+            LicenseView.Text = selectedProduct.name
+            LicenseView.Show()
         Else
             MessageBox.Show("Please select a product from the list.")
         End If
@@ -119,12 +126,8 @@ Public Class Mainfrm
     Private Sub LbxProducts_SelectedIndexChanged(sender As Object, e As EventArgs) Handles LbxProducts.SelectedIndexChanged
         If LbxProducts.SelectedIndex = -1 Then Return
 
-        Dim productName As String = LbxProducts.SelectedItem.ToString()
-        Dim productID As Integer = GetProductIDByProductName(productName)
-        If productID = -1 Then
-            MessageBox.Show("Product ID not found.")
-            Return
-        End If
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
 
         LoadFeaturesIntoLbxFeatures(productID)
         LoadAttributesIntoLbxAttributes(productID)
@@ -167,8 +170,8 @@ Public Class Mainfrm
             Return
         End If
 
-        Dim productName As String = LbxProducts.SelectedItem.ToString()
-        Dim productID As Integer = GetProductIDByProductName(productName)
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
         If productID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
@@ -190,7 +193,7 @@ Public Class Mainfrm
         ' Insert the new feature into the database
         If AddFeatureToDatabase(productID, featureName) Then
             MessageBox.Show("Feature successfully added.")
-            LoadFeaturesIntoLbxFeatures(productID)  ' Assuming this function refreshes the feature list
+            LoadFeaturesIntoLbxFeatures(ProductID)
         Else
             MessageBox.Show("Error adding the feature.")
         End If
@@ -203,8 +206,8 @@ Public Class Mainfrm
             Return
         End If
 
-        Dim productName As String = LbxProducts.SelectedItem.ToString()
-        Dim productID As Integer = GetProductIDByProductName(productName)
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
         If productID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
@@ -226,7 +229,7 @@ Public Class Mainfrm
         ' Insert the new attribute into the database
         If AddAttributeToDatabase(productID, attributeName) Then
             MessageBox.Show("Attribute successfully added.")
-            LoadAttributesIntoLbxAttributes(productID)  ' Assuming this function refreshes the attribute list
+            LoadAttributesIntoLbxAttributes(ProductID)
         Else
             MessageBox.Show("Error adding the attribute.")
         End If
@@ -256,7 +259,8 @@ Public Class Mainfrm
         End If
 
         Dim featureName As String = LbxFeatures.SelectedItem.ToString()
-        Dim productID As Integer = GetProductIDByProductName(LbxProducts.SelectedItem.ToString())
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
         If productID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
@@ -265,7 +269,7 @@ Public Class Mainfrm
         ' Delete the feature from the database
         If DeleteFeatureFromDatabase(productID, featureName) Then
             MessageBox.Show("Feature successfully deleted.")
-            LoadFeaturesIntoLbxFeatures(productID)  ' Assuming this function updates the feature list in the ListBox
+            LoadFeaturesIntoLbxFeatures(ProductID)
         Else
             MessageBox.Show("Error deleting the feature.")
         End If
@@ -280,7 +284,8 @@ Public Class Mainfrm
         End If
 
         Dim attributeName As String = LbxAttributes.SelectedItem.ToString()
-        Dim productID As Integer = GetProductIDByProductName(LbxProducts.SelectedItem.ToString())
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
         If productID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
@@ -300,17 +305,14 @@ Public Class Mainfrm
     End Sub
 
     Private Sub TxtSearch_TextChanged(sender As Object, e As EventArgs) Handles TxtSearch.TextChanged
-        Dim searchText As String = TxtSearch.Text.ToLower()
+        Dim searchQuery As String = TxtSearch.Text.ToLower()
+        LbxProducts.Items.Clear()  ' Clear the ListBox before filtering
 
-        ' Filter the dictionary for product names that contain the search text
-        Dim filteredProducts = productIDs.Where(Function(p) p.Key.ToLower().Contains(searchText))
-
-        ' Clear existing items in LbxProducts before adding new ones
-        LbxProducts.Items.Clear()
-
-        ' Add the filtered product names to the ListBox
-        For Each product In filteredProducts
-            LbxProducts.Items.Add(product.Key)
+        ' Filter and add only the elements that match the search text
+        For Each product In AllProducts
+            If product.Name.ToLower().Contains(searchQuery) Then
+                LbxProducts.Items.Add(product)
+            End If
         Next
     End Sub
 
@@ -387,8 +389,8 @@ Public Class Mainfrm
                     LbxClients.Items.Clear() ' Clear existing items in the ListBox
 
                     While reader.Read()
-                        Dim clientID As Integer = reader.GetInt32(0) ' Assuming ClientID is the first column
-                        Dim clientName As String = reader.GetString(1) ' Assuming Name is the second column
+                        Dim clientID As Integer = reader.GetInt32(0)
+                        Dim clientName As String = reader.GetString(1)
                         Dim client = New With {.ID = clientID, .Name = clientName}
 
                         LbxClients.Items.Add(client)
@@ -466,7 +468,7 @@ Public Class Mainfrm
 
     Private Sub LbxClients_SelectedIndexChanged(sender As Object, e As EventArgs) Handles LbxClients.SelectedIndexChanged
         If LbxClients.SelectedIndex <> -1 Then
-            Dim selectedClient = DirectCast(LbxClients.SelectedItem, Object)  ' Assuming items are dynamic objects
+            Dim selectedClient = DirectCast(LbxClients.SelectedItem, Object)
             LoadClientData(selectedClient.ID)
         End If
     End Sub
@@ -591,7 +593,7 @@ Public Class Mainfrm
             Return
         End If
 
-        Dim selectedUser As String = LbxUsers.SelectedItem.ToString()  ' Assuming ListBox displays usernames
+        Dim selectedUser As String = LbxUsers.SelectedItem.ToString()
 
         Dim query As String = $"UPDATE Users SET {permission} = @Value WHERE User = @UserName"
         Using cmd As New SQLiteCommand(query, conn)
@@ -662,16 +664,29 @@ Public Class Mainfrm
         End If
 
         Dim productName As String = LbxProducts.SelectedItem.ToString()
-        Dim productId As Integer
-        If productIDs.TryGetValue(productName, productId) Then
+        Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
+        Dim ProductID = selectedProduct.ID
+
+        ' Search for the product by name
+        For Each product In AllProducts
+            If product.Name.Equals(productName) Then
+                productId = product.ID
+                Exit For
+            End If
+        Next
+
+        ' Check if a valid product ID was found
+        If productId <> -1 Then
             ' Confirm product deletion
             If MessageBox.Show("Are you sure you want to delete this product and all associated data?", "Confirm Delete", MessageBoxButtons.YesNo) = DialogResult.Yes Then
                 DeleteProduct(productId)
             End If
         Else
-            MessageBox.Show("Product ID not found.")
+            MessageBox.Show(productId & "Product ID not found.")
         End If
+        LoadProducts()
     End Sub
+
 
     Private Sub DeleteProduct(productId As Integer)
         Dim transaction = conn.BeginTransaction()

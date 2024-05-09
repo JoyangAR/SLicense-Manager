@@ -439,6 +439,7 @@ Partial Class Mainfrm
         '
         'LbxProducts
         '
+        Me.LbxProducts.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed
         Me.LbxProducts.FormattingEnabled = True
         Me.LbxProducts.Location = New System.Drawing.Point(6, 58)
         Me.LbxProducts.Name = "LbxProducts"
