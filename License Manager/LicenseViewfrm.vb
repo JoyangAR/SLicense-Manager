@@ -6,7 +6,7 @@ Imports System.Windows.Forms
 Imports Standard.Licensing
 
 Public Class LicenseViewfrm
-    Private Ulicense As License
+    Private ULicense As License
     Private PrivateKey As String
     Private PublicKey As String
     Dim AttributesDictionary As Dictionary(Of String, String)
@@ -27,6 +27,7 @@ Public Class LicenseViewfrm
         VscrlUsers.Minimum = 1
         VscrlUsers.Maximum = 10000
         VscrlUsers.Value = 1
+        CbxLicenseType.SelectedIndex = 0
     End Sub
 
 
@@ -130,8 +131,6 @@ Public Class LicenseViewfrm
         LoadClientNames()
     End Sub
 
-
-
     Private Sub FillComboBoxWithAttributes()
         ' Load attribute dictionary for the selected product
         AttributesDictionary = GetAttributesDictionary(CurrentProductID)
@@ -141,6 +140,11 @@ Public Class LicenseViewfrm
         For Each attributeName As String In AttributesDictionary.Keys
             CbxAttributes.Items.Add(attributeName)
         Next
+
+        ' Set the first item as the selected item
+        If CbxAttributes.Items.Count > 0 Then
+            CbxAttributes.SelectedIndex = 0  ' Esto seleccionará automáticamente el primer atributo
+        End If
     End Sub
 
     Private Sub LoadClientData()
@@ -230,7 +234,7 @@ Public Class LicenseViewfrm
                 AttributesDictionary = ULicense.AdditionalAttributes.GetAll()
                 CbxLicenseType.Text = ULicense.Type.ToString
                 ProductFeatureDictionary = ULicense.ProductFeatures.GetAll()
-
+                DtpExpiration.Value = ULicense.Expiration
                 ' Populate features list and select corresponding items
                 SelectFeatures()
                 TxtValidation.Text = ValidateLicense(ULicense, PublicKey).ToString
@@ -243,6 +247,11 @@ Public Class LicenseViewfrm
                 myStream.Close()
             End If
         End Try
+        ' Check if an attribute is selected in the ComboBox
+        If CbxAttributes.SelectedIndex <> -1 Then
+            Dim selectedAttribute As String = CbxAttributes.SelectedItem.ToString()
+            TxtAttributeValue.Text = AttributesDictionary(selectedAttribute) ' Display the value in the TextBox
+        End If
     End Sub
 
     Private Sub LoadClientDetails(clientID As Integer)
@@ -359,7 +368,7 @@ Public Class LicenseViewfrm
 
             ' Create the license with specified parameters
             Try
-                Ulicense = License.[New]() _
+                ULicense = License.[New]() _
         .WithUniqueIdentifier(licenseId) _
         .As(GetLicenseType(CbxLicenseType.Text)) _
         .WithMaximumUtilization(CbxUsers.Text) _
@@ -459,6 +468,7 @@ Public Class LicenseViewfrm
 
     Private Sub BtnNewLic_Click(sender As Object, e As EventArgs) Handles BtnNewLic.Click
         ClearFormControls(Me)
+        FillComboBoxWithAttributes()
     End Sub
 
     Private Sub ClearFormControls(parentControl As Control)
@@ -476,6 +486,8 @@ Public Class LicenseViewfrm
                 ClearFormControls(ctrl)
             End If
         Next
+        CbxLicenseType.SelectedIndex = 0
+        CbxUsers.Text = "1"
     End Sub
 
 

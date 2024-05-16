@@ -172,13 +172,13 @@ Partial Class LicenseViewfrm
         '
         'CbxLicenseType
         '
+        Me.CbxLicenseType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.CbxLicenseType.FormattingEnabled = True
         Me.CbxLicenseType.Items.AddRange(New Object() {"Trial", "Standard"})
         Me.CbxLicenseType.Location = New System.Drawing.Point(316, 74)
         Me.CbxLicenseType.Name = "CbxLicenseType"
         Me.CbxLicenseType.Size = New System.Drawing.Size(225, 21)
         Me.CbxLicenseType.TabIndex = 12
-        Me.CbxLicenseType.Text = "Trial"
         '
         'Label12
         '
