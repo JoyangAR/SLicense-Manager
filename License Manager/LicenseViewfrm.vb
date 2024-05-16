@@ -529,7 +529,11 @@ Public Class LicenseViewfrm
     End Sub
 
     Private Sub BtnExportLic_Click(sender As Object, e As EventArgs) Handles BtnExportLic.Click
-        If LbxClients.SelectedIndex = -1 Then Return
+
+        If LbxClients.SelectedIndex = -1 Then
+            MessageBox.Show("Please select a client from the list.")
+            Return
+        End If
 
         Dim selectedClient = DirectCast(LbxClients.SelectedItem, Object)
         Dim clientID As Integer = selectedClient.ID
