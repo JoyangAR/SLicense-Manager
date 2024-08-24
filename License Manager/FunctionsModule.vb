@@ -22,6 +22,8 @@ Module FunctionsModule
     Public canExportLics As Boolean
     Public canExportKeys As Boolean
     Public canEditLics As Boolean
+    Public canOnlyTrials As Boolean
+    Public canMaxDays As Integer
     Public conn As New SQLiteConnection(connectionString)
 
     Sub OpenSqliteConnection()
@@ -69,7 +71,7 @@ Module FunctionsModule
         OpenSqliteConnection()
 
         ' Create Users table
-        Dim queryUsers As String = "CREATE TABLE IF NOT EXISTS Users (UserID INTEGER PRIMARY KEY AUTOINCREMENT, User TEXT, Password TEXT, IsAdmin INTEGER, EditClients INTEGER, EditProducts INTEGER, DeleteClients INTEGER, DeleteProducts INTEGER, ExportLics INTEGER, EditLics INTEGER, ExportKeys INTEGER);"
+        Dim queryUsers As String = "CREATE TABLE IF NOT EXISTS Users (UserID INTEGER PRIMARY KEY AUTOINCREMENT, User TEXT, Password TEXT, IsAdmin INTEGER, EditClients INTEGER, EditProducts INTEGER, DeleteClients INTEGER, DeleteProducts INTEGER, ExportLics INTEGER, EditLics INTEGER, ExportKeys INTEGER, OnlyTrials INTEGER, MaxTrialDays INTEGER);"
         Using cmd As New SQLiteCommand(queryUsers, conn)
             cmd.ExecuteNonQuery()
         End Using
@@ -310,7 +312,7 @@ Module FunctionsModule
 
     Sub InsertDefaultUser()
         ' Insert a default user into the database
-        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys) VALUES ('Administrator', @Supervisor, 1, 0, 0, 0, 0, 0, 0, 0)"
+        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys, OnlyTrials, MaxTrialDays) VALUES ('Administrator', @Supervisor, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)"
         Using cmd As New SQLiteCommand(insertQuery, conn)
             cmd.Parameters.AddWithValue("@Supervisor", EncodeToBase64("Supervisor"))
             cmd.ExecuteNonQuery()  ' Execute the insertion

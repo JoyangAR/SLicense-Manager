@@ -79,7 +79,20 @@ Public Class LicenseViewfrm
             MessageBox.Show("Customer cannot be empty", "License Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
         End If
-
+        ' Stop license creation if user does not have permission
+        If Not isAdmin Then
+            If canOnlyTrials Then
+                If CbxLicenseType.Text <> "Trial" Then
+                    MessageBox.Show("Permission is set for Only Trials")
+                    Return
+                Else
+                    If (DtpExpiration.Value.Date - Date.Today).Days > canMaxDays Then
+                        MessageBox.Show($"Permission is set for a max days of {canMaxDays}")
+                        Return
+                    End If
+                End If
+            End If
+        End If
         ' Obtain ClientID and check if a license already exists
         Dim clientID As Integer = FindAndCreateClient(CbxCustomer.Text, TxtEMail.Text)
 
@@ -355,7 +368,20 @@ Public Class LicenseViewfrm
             MessageBox.Show("Customer cannot be empty", "License Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
         End If
-
+        ' Stop license update if user does not have permission
+        If Not isAdmin Then
+            If canOnlyTrials Then
+                If CbxLicenseType.Text <> "Trial" Then
+                    MessageBox.Show("Permission is set for Only Trials")
+                    Return
+                Else
+                    If (DtpExpiration.Value.Date - Date.Today).Days > canMaxDays Then
+                        MessageBox.Show($"Permission is set for a max days of {canMaxDays}")
+                        Return
+                    End If
+                End If
+            End If
+        End If
         ' Get ClientID and check if a license already exists for this client and product
         Dim clientID As Integer = FindAndCreateClient(CbxCustomer.Text, TxtEMail.Text)
 

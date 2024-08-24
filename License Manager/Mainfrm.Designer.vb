@@ -22,7 +22,7 @@ Partial Class Mainfrm
     'No lo modifique con el editor de código.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
-        Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.UsersTab = New System.Windows.Forms.TabPage()
         Me.GroupBox4 = New System.Windows.Forms.GroupBox()
         Me.ChkPermissionExportKeys = New System.Windows.Forms.CheckBox()
         Me.ChkPermissionExportLics = New System.Windows.Forms.CheckBox()
@@ -38,7 +38,7 @@ Partial Class Mainfrm
         Me.BtnDeleteUser = New System.Windows.Forms.Button()
         Me.BtnChangePassword = New System.Windows.Forms.Button()
         Me.LbxUsers = New System.Windows.Forms.ListBox()
-        Me.TabPage1 = New System.Windows.Forms.TabPage()
+        Me.ProductsTab = New System.Windows.Forms.TabPage()
         Me.GpbOptionals = New System.Windows.Forms.GroupBox()
         Me.Label6 = New System.Windows.Forms.Label()
         Me.GpbFeatAndAtt = New System.Windows.Forms.GroupBox()
@@ -57,8 +57,8 @@ Partial Class Mainfrm
         Me.LbxProducts = New System.Windows.Forms.ListBox()
         Me.BtnRemoveProduct = New System.Windows.Forms.Button()
         Me.BtnAddProduct = New System.Windows.Forms.Button()
-        Me.TabControl1 = New System.Windows.Forms.TabControl()
-        Me.TabPage3 = New System.Windows.Forms.TabPage()
+        Me.MainTabControl = New System.Windows.Forms.TabControl()
+        Me.ClientsTab = New System.Windows.Forms.TabPage()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.BtnDeleteClient = New System.Windows.Forms.Button()
         Me.BtnNewClient = New System.Windows.Forms.Button()
@@ -69,35 +69,41 @@ Partial Class Mainfrm
         Me.cbxFilters = New System.Windows.Forms.ComboBox()
         Me.ClientsDataGrid = New System.Windows.Forms.DataGridView()
         Me.TxtClientSearch = New System.Windows.Forms.TextBox()
-        Me.TabPage2.SuspendLayout()
+        Me.ChkPermissionOnlyTrials = New System.Windows.Forms.CheckBox()
+        Me.TxtMaxTrial = New System.Windows.Forms.TextBox()
+        Me.Label7 = New System.Windows.Forms.Label()
+        Me.UsersTab.SuspendLayout()
         Me.GroupBox4.SuspendLayout()
         Me.GpbUsers.SuspendLayout()
-        Me.TabPage1.SuspendLayout()
+        Me.ProductsTab.SuspendLayout()
         Me.GpbOptionals.SuspendLayout()
         Me.GpbFeatAndAtt.SuspendLayout()
         Me.GpbProducts.SuspendLayout()
-        Me.TabControl1.SuspendLayout()
-        Me.TabPage3.SuspendLayout()
+        Me.MainTabControl.SuspendLayout()
+        Me.ClientsTab.SuspendLayout()
         Me.GroupBox3.SuspendLayout()
         CType(Me.ClientsDataGrid, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
-        'TabPage2
+        'UsersTab
         '
-        Me.TabPage2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
-        Me.TabPage2.Controls.Add(Me.GroupBox4)
-        Me.TabPage2.Controls.Add(Me.GpbUsers)
-        Me.TabPage2.Location = New System.Drawing.Point(4, 25)
-        Me.TabPage2.Name = "TabPage2"
-        Me.TabPage2.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage2.Size = New System.Drawing.Size(598, 404)
-        Me.TabPage2.TabIndex = 1
-        Me.TabPage2.Text = "Settings"
-        Me.TabPage2.UseVisualStyleBackColor = True
+        Me.UsersTab.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
+        Me.UsersTab.Controls.Add(Me.GroupBox4)
+        Me.UsersTab.Controls.Add(Me.GpbUsers)
+        Me.UsersTab.Location = New System.Drawing.Point(4, 25)
+        Me.UsersTab.Name = "UsersTab"
+        Me.UsersTab.Padding = New System.Windows.Forms.Padding(3)
+        Me.UsersTab.Size = New System.Drawing.Size(598, 404)
+        Me.UsersTab.TabIndex = 1
+        Me.UsersTab.Text = "Settings"
+        Me.UsersTab.UseVisualStyleBackColor = True
         '
         'GroupBox4
         '
         Me.GroupBox4.BackColor = System.Drawing.SystemColors.Control
+        Me.GroupBox4.Controls.Add(Me.Label7)
+        Me.GroupBox4.Controls.Add(Me.TxtMaxTrial)
+        Me.GroupBox4.Controls.Add(Me.ChkPermissionOnlyTrials)
         Me.GroupBox4.Controls.Add(Me.ChkPermissionExportKeys)
         Me.GroupBox4.Controls.Add(Me.ChkPermissionExportLics)
         Me.GroupBox4.Controls.Add(Me.ChkPermissionEditLics)
@@ -152,7 +158,7 @@ Partial Class Mainfrm
         Me.BtnApplyPermission.BackColor = System.Drawing.SystemColors.Control
         Me.BtnApplyPermission.Cursor = System.Windows.Forms.Cursors.Default
         Me.BtnApplyPermission.ForeColor = System.Drawing.SystemColors.ControlText
-        Me.BtnApplyPermission.Location = New System.Drawing.Point(192, 133)
+        Me.BtnApplyPermission.Location = New System.Drawing.Point(189, 133)
         Me.BtnApplyPermission.Name = "BtnApplyPermission"
         Me.BtnApplyPermission.RightToLeft = System.Windows.Forms.RightToLeft.No
         Me.BtnApplyPermission.Size = New System.Drawing.Size(81, 25)
@@ -277,19 +283,19 @@ Partial Class Mainfrm
         Me.LbxUsers.Size = New System.Drawing.Size(169, 134)
         Me.LbxUsers.TabIndex = 1
         '
-        'TabPage1
+        'ProductsTab
         '
-        Me.TabPage1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
-        Me.TabPage1.Controls.Add(Me.GpbOptionals)
-        Me.TabPage1.Controls.Add(Me.GpbFeatAndAtt)
-        Me.TabPage1.Controls.Add(Me.GpbProducts)
-        Me.TabPage1.Location = New System.Drawing.Point(4, 25)
-        Me.TabPage1.Name = "TabPage1"
-        Me.TabPage1.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage1.Size = New System.Drawing.Size(598, 404)
-        Me.TabPage1.TabIndex = 0
-        Me.TabPage1.Text = "Products"
-        Me.TabPage1.UseVisualStyleBackColor = True
+        Me.ProductsTab.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
+        Me.ProductsTab.Controls.Add(Me.GpbOptionals)
+        Me.ProductsTab.Controls.Add(Me.GpbFeatAndAtt)
+        Me.ProductsTab.Controls.Add(Me.GpbProducts)
+        Me.ProductsTab.Location = New System.Drawing.Point(4, 25)
+        Me.ProductsTab.Name = "ProductsTab"
+        Me.ProductsTab.Padding = New System.Windows.Forms.Padding(3)
+        Me.ProductsTab.Size = New System.Drawing.Size(598, 404)
+        Me.ProductsTab.TabIndex = 0
+        Me.ProductsTab.Text = "Products"
+        Me.ProductsTab.UseVisualStyleBackColor = True
         '
         'GpbOptionals
         '
@@ -464,30 +470,31 @@ Partial Class Mainfrm
         Me.BtnAddProduct.Text = "Add Product"
         Me.BtnAddProduct.UseVisualStyleBackColor = True
         '
-        'TabControl1
+        'MainTabControl
         '
-        Me.TabControl1.Appearance = System.Windows.Forms.TabAppearance.FlatButtons
-        Me.TabControl1.Controls.Add(Me.TabPage1)
-        Me.TabControl1.Controls.Add(Me.TabPage2)
-        Me.TabControl1.Controls.Add(Me.TabPage3)
-        Me.TabControl1.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.TabControl1.Location = New System.Drawing.Point(0, 0)
-        Me.TabControl1.Multiline = True
-        Me.TabControl1.Name = "TabControl1"
-        Me.TabControl1.SelectedIndex = 0
-        Me.TabControl1.Size = New System.Drawing.Size(606, 433)
-        Me.TabControl1.TabIndex = 4
+        Me.MainTabControl.Appearance = System.Windows.Forms.TabAppearance.FlatButtons
+        Me.MainTabControl.Controls.Add(Me.ProductsTab)
+        Me.MainTabControl.Controls.Add(Me.UsersTab)
+        Me.MainTabControl.Controls.Add(Me.ClientsTab)
+        Me.MainTabControl.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.MainTabControl.Location = New System.Drawing.Point(0, 0)
+        Me.MainTabControl.Multiline = True
+        Me.MainTabControl.Name = "MainTabControl"
+        Me.MainTabControl.SelectedIndex = 0
+        Me.MainTabControl.Size = New System.Drawing.Size(606, 433)
+        Me.MainTabControl.TabIndex = 4
         '
-        'TabPage3
+        'ClientsTab
         '
-        Me.TabPage3.Controls.Add(Me.GroupBox3)
-        Me.TabPage3.Location = New System.Drawing.Point(4, 25)
-        Me.TabPage3.Name = "TabPage3"
-        Me.TabPage3.Padding = New System.Windows.Forms.Padding(3)
-        Me.TabPage3.Size = New System.Drawing.Size(598, 404)
-        Me.TabPage3.TabIndex = 2
-        Me.TabPage3.Text = "Clients"
-        Me.TabPage3.UseVisualStyleBackColor = True
+        Me.ClientsTab.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
+        Me.ClientsTab.Controls.Add(Me.GroupBox3)
+        Me.ClientsTab.Location = New System.Drawing.Point(4, 25)
+        Me.ClientsTab.Name = "ClientsTab"
+        Me.ClientsTab.Padding = New System.Windows.Forms.Padding(3)
+        Me.ClientsTab.Size = New System.Drawing.Size(598, 404)
+        Me.ClientsTab.TabIndex = 2
+        Me.ClientsTab.Text = "Clients"
+        Me.ClientsTab.UseVisualStyleBackColor = True
         '
         'GroupBox3
         '
@@ -592,29 +599,56 @@ Partial Class Mainfrm
         Me.TxtClientSearch.Size = New System.Drawing.Size(80, 20)
         Me.TxtClientSearch.TabIndex = 1
         '
+        'ChkPermissionOnlyTrials
+        '
+        Me.ChkPermissionOnlyTrials.AutoSize = True
+        Me.ChkPermissionOnlyTrials.Location = New System.Drawing.Point(172, 70)
+        Me.ChkPermissionOnlyTrials.Name = "ChkPermissionOnlyTrials"
+        Me.ChkPermissionOnlyTrials.Size = New System.Drawing.Size(75, 17)
+        Me.ChkPermissionOnlyTrials.TabIndex = 16
+        Me.ChkPermissionOnlyTrials.Text = "Only Trials"
+        Me.ChkPermissionOnlyTrials.UseVisualStyleBackColor = True
+        '
+        'TxtMaxTrial
+        '
+        Me.TxtMaxTrial.Location = New System.Drawing.Point(172, 105)
+        Me.TxtMaxTrial.Name = "TxtMaxTrial"
+        Me.TxtMaxTrial.Size = New System.Drawing.Size(97, 20)
+        Me.TxtMaxTrial.TabIndex = 17
+        '
+        'Label7
+        '
+        Me.Label7.AutoSize = True
+        Me.Label7.Location = New System.Drawing.Point(169, 90)
+        Me.Label7.Name = "Label7"
+        Me.Label7.Size = New System.Drawing.Size(101, 13)
+        Me.Label7.TabIndex = 18
+        Me.Label7.Text = "Maximum Trial Days"
+        '
         'Mainfrm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(606, 433)
-        Me.Controls.Add(Me.TabControl1)
+        Me.Controls.Add(Me.MainTabControl)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D
         Me.Name = "Mainfrm"
+        Me.ShowIcon = False
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "License Manager"
-        Me.TabPage2.ResumeLayout(False)
+        Me.UsersTab.ResumeLayout(False)
         Me.GroupBox4.ResumeLayout(False)
         Me.GroupBox4.PerformLayout()
         Me.GpbUsers.ResumeLayout(False)
-        Me.TabPage1.ResumeLayout(False)
+        Me.ProductsTab.ResumeLayout(False)
         Me.GpbOptionals.ResumeLayout(False)
         Me.GpbOptionals.PerformLayout()
         Me.GpbFeatAndAtt.ResumeLayout(False)
         Me.GpbFeatAndAtt.PerformLayout()
         Me.GpbProducts.ResumeLayout(False)
         Me.GpbProducts.PerformLayout()
-        Me.TabControl1.ResumeLayout(False)
-        Me.TabPage3.ResumeLayout(False)
+        Me.MainTabControl.ResumeLayout(False)
+        Me.ClientsTab.ResumeLayout(False)
         Me.GroupBox3.ResumeLayout(False)
         Me.GroupBox3.PerformLayout()
         CType(Me.ClientsDataGrid, System.ComponentModel.ISupportInitialize).EndInit()
@@ -622,8 +656,8 @@ Partial Class Mainfrm
 
     End Sub
 
-    Friend WithEvents TabPage2 As TabPage
-    Friend WithEvents TabPage1 As TabPage
+    Friend WithEvents UsersTab As TabPage
+    Friend WithEvents ProductsTab As TabPage
     Friend WithEvents GpbOptionals As GroupBox
     Friend WithEvents GpbFeatAndAtt As GroupBox
     Friend WithEvents Label1 As Label
@@ -638,7 +672,7 @@ Partial Class Mainfrm
     Friend WithEvents LbxProducts As ListBox
     Friend WithEvents BtnRemoveProduct As Button
     Friend WithEvents BtnAddProduct As Button
-    Friend WithEvents TabControl1 As TabControl
+    Friend WithEvents MainTabControl As TabControl
     Friend WithEvents BtnViewLicenses As Button
     Friend WithEvents Label2 As Label
     Friend WithEvents TxtSearch As TextBox
@@ -647,7 +681,7 @@ Partial Class Mainfrm
     Public WithEvents BtnDeleteUser As Button
     Public WithEvents BtnChangePassword As Button
     Public WithEvents LbxUsers As ListBox
-    Friend WithEvents TabPage3 As TabPage
+    Friend WithEvents ClientsTab As TabPage
     Friend WithEvents GroupBox3 As GroupBox
     Friend WithEvents TxtClientSearch As TextBox
     Friend WithEvents ClientsDataGrid As DataGridView
@@ -669,4 +703,7 @@ Partial Class Mainfrm
     Friend WithEvents ChkPermissionExportKeys As CheckBox
     Friend WithEvents ChkPermissionEditLics As CheckBox
     Friend WithEvents Label6 As Label
+    Friend WithEvents Label7 As Label
+    Friend WithEvents TxtMaxTrial As TextBox
+    Friend WithEvents ChkPermissionOnlyTrials As CheckBox
 End Class

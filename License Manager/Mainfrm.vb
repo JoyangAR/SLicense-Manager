@@ -338,7 +338,7 @@ Public Class Mainfrm
         End If
 
         ' Insert new user
-        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys) VALUES (@User, @Password, 0, 0, 0, 0, 0, 0, 0, 0)"
+        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys, OnlyTrials, MaxTrialDays) VALUES (@User, @Password, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)"
         Using cmd As New SQLiteCommand(insertQuery, conn)
             cmd.Parameters.AddWithValue("@User", NewUserName)
             cmd.Parameters.AddWithValue("@Password", EncodeToBase64(NewPassword))
@@ -536,7 +536,7 @@ Public Class Mainfrm
 
 
     Private Sub ConfigureUserPermissions()
-        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics FROM Users WHERE User = @SignedUser"
+        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @SignedUser"
         Using cmd As New SQLiteCommand(query, conn)
             cmd.Parameters.AddWithValue("@SignedUser", SignedUser)
             Using reader As SQLiteDataReader = cmd.ExecuteReader()
@@ -549,10 +549,11 @@ Public Class Mainfrm
                     canExportLics = Convert.ToBoolean(reader("ExportLics"))
                     canExportKeys = Convert.ToBoolean(reader("ExportKeys"))
                     canEditLics = Convert.ToBoolean(reader("EditLics"))
-
+                    canOnlyTrials = Convert.ToBoolean(reader("OnlyTrials"))
+                    canMaxDays = reader("MaxTrialDays")
                     ' Enable or disable controls based on permissions
                     If isAdmin Then
-                        Exit Sub  ' Admin has all rights, no need to disable any controls
+                        Exit Sub  ' Admin has all permissions, no need to disable any controls
                     Else
                         ' Set controls based on specific permissions
                         BtnNewClient.Enabled = canEditClients
@@ -575,6 +576,10 @@ Public Class Mainfrm
                         ChkPermissionEditLics.Enabled = isAdmin
                         ChkPermissionExportLics.Enabled = isAdmin
                         ChkPermissionExportKeys.Enabled = isAdmin
+                        ChkPermissionOnlyTrials.Enabled = isAdmin
+                        TxtMaxTrial.Enabled = isAdmin
+                        BtnApplyPermission.Enabled = isAdmin
+                        Label7.Enabled = isAdmin
                     End If
                 End If
             End Using
@@ -588,7 +593,22 @@ Public Class Mainfrm
         FormatDataGridView()
     End Sub
 
-    Private Sub UpdateUserPermission(permission As String, value As Boolean)
+    Private Sub UpdateUserPermissionBool(permission As String, value As Boolean)
+        If LbxUsers.SelectedIndex = -1 Then
+            MessageBox.Show("Please select a user first.")
+            Return
+        End If
+
+        Dim selectedUser As String = LbxUsers.SelectedItem.ToString()
+
+        Dim query As String = $"UPDATE Users SET {permission} = @Value WHERE User = @UserName"
+        Using cmd As New SQLiteCommand(query, conn)
+            cmd.Parameters.AddWithValue("@Value", value)
+            cmd.Parameters.AddWithValue("@UserName", selectedUser)
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+    Private Sub UpdateUserPermisionInt(permission As String, value As Integer)
         If LbxUsers.SelectedIndex = -1 Then
             MessageBox.Show("Please select a user first.")
             Return
@@ -613,7 +633,7 @@ Public Class Mainfrm
 
 
     Private Sub LoadUserPermissions(userName As String)
-        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics FROM Users WHERE User = @User"
+        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @User"
         Using cmd As New SQLiteCommand(query, conn)
             cmd.Parameters.AddWithValue("@User", userName)
             Using reader As SQLiteDataReader = cmd.ExecuteReader()
@@ -627,6 +647,8 @@ Public Class Mainfrm
                     ChkPermissionEditLics.Checked = Convert.ToBoolean(reader("EditLics"))
                     ChkPermissionExportLics.Checked = Convert.ToBoolean(reader("ExportLics"))
                     ChkPermissionExportKeys.Checked = Convert.ToBoolean(reader("ExportKeys"))
+                    ChkPermissionOnlyTrials.Checked = Convert.ToBoolean(reader("OnlyTrials"))
+                    TxtMaxTrial.Text = reader("MaxTrialDays")
                 Else
                     ' Uncheck all CheckBoxes if no data found
                     ClearAllCheckBoxes()
@@ -644,18 +666,22 @@ Public Class Mainfrm
         ChkPermissionEditLics.Checked = False
         ChkPermissionExportLics.Checked = False
         ChkPermissionExportKeys.Checked = False
+        ChkPermissionOnlyTrials.Checked = False
+        TxtMaxTrial.Text = String.Empty
     End Sub
 
     Private Sub BtnApplyPermission_Click(sender As Object, e As EventArgs) Handles BtnApplyPermission.Click
         ' Update each user permission based on CheckBox states
-        UpdateUserPermission("IsAdmin", ChkPermissionAdmin.Checked)
-        UpdateUserPermission("EditClients", ChkPermissionCreateEditClients.Checked)
-        UpdateUserPermission("EditProducts", ChkPermissionCreateEditProducts.Checked)
-        UpdateUserPermission("DeleteClients", ChkPermissionDeleteClients.Checked)
-        UpdateUserPermission("DeleteProducts", ChkPermissionDeleteProducts.Checked)
-        UpdateUserPermission("EditLics", ChkPermissionEditLics.Checked)
-        UpdateUserPermission("ExportLics", ChkPermissionExportLics.Checked)
-        UpdateUserPermission("ExportKeys", ChkPermissionExportKeys.Checked)
+        UpdateUserPermissionBool("IsAdmin", ChkPermissionAdmin.Checked)
+        UpdateUserPermissionBool("EditClients", ChkPermissionCreateEditClients.Checked)
+        UpdateUserPermissionBool("EditProducts", ChkPermissionCreateEditProducts.Checked)
+        UpdateUserPermissionBool("DeleteClients", ChkPermissionDeleteClients.Checked)
+        UpdateUserPermissionBool("DeleteProducts", ChkPermissionDeleteProducts.Checked)
+        UpdateUserPermissionBool("EditLics", ChkPermissionEditLics.Checked)
+        UpdateUserPermissionBool("ExportLics", ChkPermissionExportLics.Checked)
+        UpdateUserPermissionBool("ExportKeys", ChkPermissionExportKeys.Checked)
+        UpdateUserPermissionBool("OnlyTrials", ChkPermissionOnlyTrials.Checked)
+        UpdateUserPermisionInt("MaxTrialDays", TxtMaxTrial.Text)
     End Sub
 
     Private Sub BtnRemoveProduct_Click(sender As Object, e As EventArgs) Handles BtnRemoveProduct.Click
@@ -766,5 +792,22 @@ Public Class Mainfrm
             Return False
         End Try
     End Function
+
+    Private Sub TxtMaxTrial_TextChanged(sender As Object, e As EventArgs) Handles TxtMaxTrial.TextChanged
+        ' Save the current cursor position
+        Dim cursorPosition As Integer = TxtMaxTrial.SelectionStart
+
+        ' Keep only numeric characters in the TextBox
+        TxtMaxTrial.Text = System.Text.RegularExpressions.Regex.Replace(TxtMaxTrial.Text, "[^\d]", "")
+
+        ' Ensure the TextBox is not empty
+        If TxtMaxTrial.Text.Length = 0 Then
+            TxtMaxTrial.Text = "0"
+            cursorPosition = 1
+        End If
+
+        ' Restore the cursor position
+        TxtMaxTrial.SelectionStart = Math.Min(cursorPosition, TxtMaxTrial.Text.Length)
+    End Sub
 
 End Class

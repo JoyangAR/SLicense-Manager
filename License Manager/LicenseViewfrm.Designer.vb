@@ -531,6 +531,7 @@ Partial Class LicenseViewfrm
         Me.Controls.Add(Me.GpbValidation)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D
         Me.Name = "LicenseViewfrm"
+        Me.ShowIcon = False
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "LicenseView"
         Me.GpbValidation.ResumeLayout(False)
