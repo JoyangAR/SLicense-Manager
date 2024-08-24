@@ -12,7 +12,7 @@ Welcome to the SLicense Manager repository! This application is crafted for deve
 ## Prerequisites
 
 Before you get started, ensure you have the following installed:
-- [.NET Framework](https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net40) (Version 4.0 or later)
+- [.NET Framework](https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net40) (Version 4.5 or later)
 - [SQLite](https://www.sqlite.org/index.html) for managing the application's database.
 - [Standard.Licensing](https://github.com/junian/Standard.Licensing/blob/master/docs/README.md) for managing licenses.
 
