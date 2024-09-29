@@ -86,7 +86,7 @@ Public Class Mainfrm
     Private Sub LbxClients_DrawItem(sender As Object, e As DrawItemEventArgs) Handles LbxClients.DrawItem
         e.DrawBackground()
         If e.Index >= 0 Then
-            Dim item = DirectCast(LbxClients.Items(e.Index), Object)  ' Assume you've added the object as shown previously
+            Dim item = DirectCast(LbxClients.Items(e.Index), Object)
             e.Graphics.DrawString(item.Name, e.Font, Brushes.Black, e.Bounds)
         End If
         e.DrawFocusRectangle()
@@ -96,7 +96,7 @@ Public Class Mainfrm
     Private Sub LbxProducts_DrawItem(sender As Object, e As DrawItemEventArgs) Handles LbxProducts.DrawItem
         e.DrawBackground()
         If e.Index >= 0 Then
-            Dim item = DirectCast(LbxProducts.Items(e.Index), Object)  ' Assume you've added the object as shown previously
+            Dim item = DirectCast(LbxProducts.Items(e.Index), Object)
             e.Graphics.DrawString(item.Name, e.Font, Brushes.Black, e.Bounds)
         End If
         e.DrawFocusRectangle()
@@ -235,22 +235,6 @@ Public Class Mainfrm
             MessageBox.Show("Error adding the attribute.")
         End If
     End Sub
-
-
-    Private Function AddAttributeToDatabase(productID As Integer, attributeName As String) As Boolean
-        Dim query As String = "INSERT INTO Attributes (AttributeName, ProductID) VALUES (@AttributeName, @ProductID)"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@AttributeName", attributeName)
-            cmd.Parameters.AddWithValue("@ProductID", productID)
-            Try
-                cmd.ExecuteNonQuery()
-                Return True
-            Catch ex As Exception
-                MessageBox.Show("Error inserting attribute: " & ex.Message)
-                Return False
-            End Try
-        End Using
-    End Function
 
     Private Sub BtnFeatureDelete_Click(sender As Object, e As EventArgs) Handles BtnFeatureDelete.Click
         ' Check if a product is selected from the list
@@ -514,13 +498,6 @@ Public Class Mainfrm
         End If
     End Sub
 
-    Private Function ClientExistsByID(clientId As Integer) As Boolean
-        Dim cmd As New SQLiteCommand("SELECT COUNT(*) FROM Clients WHERE ClientID = @ClientID", conn)
-        cmd.Parameters.AddWithValue("@ClientID", clientId)
-        Dim result As Object = cmd.ExecuteScalar()
-        Return Convert.ToInt32(result) > 0
-    End Function
-
     Private Sub SetAuditFields(ByRef updatedData As List(Of EditableKeyValuePair), clientId As Integer)
         ' Set CreatedBy and CreatedTime only if it is a new client
         If Not ClientExistsByID(clientId) Then
@@ -533,7 +510,6 @@ Public Class Mainfrm
             updatedData.RemoveAll(Function(x) x.Key = "CreatedBy" Or x.Key = "CreatedTime")
         End If
     End Sub
-
 
     Private Sub ConfigureUserPermissions()
         Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @SignedUser"
@@ -631,7 +607,6 @@ Public Class Mainfrm
         LoadUserPermissions(selectedUser)
     End Sub
 
-
     Private Sub LoadUserPermissions(userName As String)
         Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @User"
         Using cmd As New SQLiteCommand(query, conn)
@@ -714,7 +689,6 @@ Public Class Mainfrm
         LoadProducts()
     End Sub
 
-
     Private Sub DeleteProduct(productId As Integer)
         Dim transaction = conn.BeginTransaction()
 
@@ -763,35 +737,6 @@ Public Class Mainfrm
             MessageBox.Show("Please select a client to delete.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
         End If
     End Sub
-
-    Private Function DeleteClientAndLicenses(clientId As Integer) As Boolean
-        Dim transaction = conn.BeginTransaction()
-
-        Try
-            ' Delete all licenses associated with the client
-            Dim deleteLicensesQuery As String = "DELETE FROM Licenses WHERE ClientID = @ClientID"
-            Using cmdLicenses As New SQLiteCommand(deleteLicensesQuery, conn)
-                cmdLicenses.Parameters.AddWithValue("@ClientID", clientId)
-                cmdLicenses.Transaction = transaction
-                cmdLicenses.ExecuteNonQuery()
-            End Using
-
-            ' Delete the client
-            Dim deleteClientQuery As String = "DELETE FROM Clients WHERE ClientID = @ClientID"
-            Using cmdClient As New SQLiteCommand(deleteClientQuery, conn)
-                cmdClient.Parameters.AddWithValue("@ClientID", clientId)
-                cmdClient.Transaction = transaction
-                cmdClient.ExecuteNonQuery()
-            End Using
-
-            transaction.Commit()
-            Return True
-        Catch ex As Exception
-            transaction.Rollback()  ' Undo changes on error
-            MessageBox.Show("An error occurred: " & ex.Message, "Transaction Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Return False
-        End Try
-    End Function
 
     Private Sub TxtMaxTrial_TextChanged(sender As Object, e As EventArgs) Handles TxtMaxTrial.TextChanged
         ' Save the current cursor position

@@ -196,7 +196,6 @@ Public Class LicenseViewfrm
         ' Custom draw method for ListBox items
         e.DrawBackground()
         If e.Index >= 0 Then
-            ' Assume items are dynamic objects with 'Name' and 'ID'
             Dim item = DirectCast(LbxClients.Items(e.Index), Object)
             e.Graphics.DrawString(item.Name, e.Font, Brushes.Black, e.Bounds)
         End If
@@ -354,7 +353,6 @@ Public Class LicenseViewfrm
     End Sub
 
     Private Sub InitializeProductFeatures()
-        ' Assuming LbxFeatures is already filled with appropriate items
         For Each item As String In LbxFeatures.Items
             If Not ProductFeatureDictionary.ContainsKey(item) Then
                 ProductFeatureDictionary.Add(item, False)  ' All items initially unselected
@@ -612,7 +610,7 @@ Public Class LicenseViewfrm
     Private Sub CbxCustomer_DrawItem(sender As Object, e As DrawItemEventArgs) Handles CbxCustomer.DrawItem
         e.DrawBackground()
         If e.Index >= 0 Then
-            Dim item = DirectCast(CbxCustomer.Items(e.Index), ComboBoxItem)  ' Assume that you have added the object as shown previously
+            Dim item = DirectCast(CbxCustomer.Items(e.Index), ComboBoxItem)
             e.Graphics.DrawString(item.Name, e.Font, Brushes.Black, e.Bounds)
         End If
         e.DrawFocusRectangle()

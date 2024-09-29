@@ -119,8 +119,8 @@ Module FunctionsModule
         End Using
 
         ' Create Attributes table
-        Dim queryAtributes As String = "CREATE TABLE IF NOT EXISTS Attributes (AttributeID INTEGER PRIMARY KEY AUTOINCREMENT, AttributeName TEXT, ProductID INTEGER);"
-        Using cmd As New SQLiteCommand(queryAtributes, conn)
+        Dim queryAttributes As String = "CREATE TABLE IF NOT EXISTS Attributes (AttributeID INTEGER PRIMARY KEY AUTOINCREMENT, AttributeName TEXT, ProductID INTEGER);"
+        Using cmd As New SQLiteCommand(queryAttributes, conn)
             cmd.ExecuteNonQuery()
         End Using
     End Sub
@@ -274,6 +274,22 @@ Module FunctionsModule
                 End If
             Catch ex As Exception
                 MessageBox.Show("Error deleting the feature: " & ex.Message)
+                Return False
+            End Try
+        End Using
+    End Function
+
+    Function AddAttributeToDatabase(productID As Integer, attributeName As String) As Boolean
+        ' Add an attribute from the database
+        Dim query As String = "INSERT INTO Attributes (AttributeName, ProductID) VALUES (@AttributeName, @ProductID)"
+        Using cmd As New SQLiteCommand(query, conn)
+            cmd.Parameters.AddWithValue("@AttributeName", attributeName)
+            cmd.Parameters.AddWithValue("@ProductID", productID)
+            Try
+                cmd.ExecuteNonQuery()
+                Return True
+            Catch ex As Exception
+                MessageBox.Show("Error inserting attribute: " & ex.Message)
                 Return False
             End Try
         End Using
@@ -569,7 +585,7 @@ Module FunctionsModule
         ' Returns the default value for a given field based on its name
         Select Case fieldName
             Case "ClientID"
-                Return GetNextClientId()  ' Assumes this function computes the next available ID
+                Return GetNextClientId()
             Case "ProductCount"
                 Return 0
             Case "CreatedBy", "CreatedTime", "Comment", "Name", "Email", "Country", "State", "City", "Company", "Postal", "Phone", "Address"
@@ -629,6 +645,42 @@ Module FunctionsModule
             cmd.ExecuteNonQuery()
         End Using
     End Sub
+
+    Function ClientExistsByID(clientId As Integer) As Boolean
+        Dim cmd As New SQLiteCommand("SELECT COUNT(*) FROM Clients WHERE ClientID = @ClientID", conn)
+        cmd.Parameters.AddWithValue("@ClientID", clientId)
+        Dim result As Object = cmd.ExecuteScalar()
+        Return Convert.ToInt32(result) > 0
+    End Function
+
+    Function DeleteClientAndLicenses(clientId As Integer) As Boolean
+        Dim transaction = conn.BeginTransaction()
+
+        Try
+            ' Delete all licenses associated with the client
+            Dim deleteLicensesQuery As String = "DELETE FROM Licenses WHERE ClientID = @ClientID"
+            Using cmdLicenses As New SQLiteCommand(deleteLicensesQuery, conn)
+                cmdLicenses.Parameters.AddWithValue("@ClientID", clientId)
+                cmdLicenses.Transaction = transaction
+                cmdLicenses.ExecuteNonQuery()
+            End Using
+
+            ' Delete the client
+            Dim deleteClientQuery As String = "DELETE FROM Clients WHERE ClientID = @ClientID"
+            Using cmdClient As New SQLiteCommand(deleteClientQuery, conn)
+                cmdClient.Parameters.AddWithValue("@ClientID", clientId)
+                cmdClient.Transaction = transaction
+                cmdClient.ExecuteNonQuery()
+            End Using
+
+            transaction.Commit()
+            Return True
+        Catch ex As Exception
+            transaction.Rollback()  ' Undo changes on error
+            MessageBox.Show("An error occurred: " & ex.Message, "Transaction Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return False
+        End Try
+    End Function
 
     Public Function RemoveNonNumericCharacters(input As String) As String
         Return Regex.Replace(input, "[^\d]", "")
