@@ -9,13 +9,14 @@ Public Class LicenseViewfrm
     Private ULicense As License
     Private PrivateKey As String
     Private PublicKey As String
-    Dim AttributesDictionary As Dictionary(Of String, String)
+    Dim LicenseAttributesDictionary As Dictionary(Of String, String)
+    Dim ProductAttributesDictionary As Dictionary(Of String, String)
     Dim ProductFeatureDictionary As New Dictionary(Of String, String)
     Private AllProductClients As New List(Of Object)
     Public CurrentProductID As Integer
     Private Sub Mainfrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        PublicKey = LoadPublicKeyFromDatabase(CurrentProductID)           ' Loads cryptographic keys for the selected product from the database.
-        PrivateKey = LoadPrivateKeyFromDatabase(CurrentProductID)
+        PublicKey = LoadPublicKey(CurrentProductID)           ' Loads cryptographic keys for the selected product from the database.
+        PrivateKey = LoadPrivateKey(CurrentProductID)
         LoadClientNames()                ' Populates a list or control with names of clients from the database.
         LoadFeaturesIntoLbxFeatures(CurrentProductID) ' Loads features for the selected product into a ListBox.
         InitializeProductFeatures()      ' Sets up UI components related to product features.
@@ -30,7 +31,6 @@ Public Class LicenseViewfrm
         CbxLicenseType.SelectedIndex = 0
     End Sub
 
-
     Sub LoadUserPermission()
         ' Set button enabled state based on user permissions and admin status
         BtnApplyAtt.Enabled = canEditLics OrElse isAdmin
@@ -42,16 +42,16 @@ Public Class LicenseViewfrm
     End Sub
 
     Private Sub LoadFeaturesIntoLbxFeatures(productID As Integer)
-        ' Load features associated with the selected product ID
-        Dim query As String = "SELECT FeatureName FROM Features WHERE ProductID = @ProductID"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", productID)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    LbxFeatures.Items.Add(reader("FeatureName").ToString())
-                End While
-            End Using
-        End Using
+        ' Clear the ListBox before loading new features
+        LbxFeatures.Items.Clear()
+
+        ' Get the list of features for the given productID
+        Dim features = GetFeaturesList(productID)
+
+        ' Add each feature to the ListBox
+        For Each feature In features
+            LbxFeatures.Items.Add(feature)
+        Next
     End Sub
 
     Private Sub LoadClientNames()
@@ -110,14 +110,14 @@ Public Class LicenseViewfrm
         ' Create the license with specified parameters
         Try
             ULicense = License.[New]() _
-        .WithUniqueIdentifier(licenseId) _
-        .As(GetLicenseType(CbxLicenseType.Text)) _
-        .WithMaximumUtilization(CbxUsers.Text) _
-        .WithAdditionalAttributes(AttributesDictionary) _
-        .WithProductFeatures(ProductFeatureDictionary) _
-        .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
-        .ExpiresAt(CDate(DtpExpiration.Text)) _
-        .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
+            .WithUniqueIdentifier(licenseId) _
+            .As(GetLicenseType(CbxLicenseType.Text)) _
+            .WithMaximumUtilization(CbxUsers.Text) _
+            .WithAdditionalAttributes(LicenseAttributesDictionary) _
+            .WithProductFeatures(ProductFeatureDictionary) _
+            .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
+            .ExpiresAt(CDate(DtpExpiration.Text)) _
+            .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
         Catch ex As Exception
             MessageBox.Show("Error signing the license: " & ex.Message)
             Return
@@ -135,7 +135,7 @@ Public Class LicenseViewfrm
         File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
 
         ' Save license info in the database or required location
-        SaveLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
+        SaveLicenseInfoOnDatabase(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
 
         ' Update client information if needed
         UpdateClientsInfo(clientID)
@@ -146,11 +146,11 @@ Public Class LicenseViewfrm
 
     Private Sub FillComboBoxWithAttributes()
         ' Load attribute dictionary for the selected product
-        AttributesDictionary = GetAttributesDictionary(CurrentProductID)
+        ProductAttributesDictionary = GetAttributesDictionary(CurrentProductID)
 
         ' Clear existing items and fill the ComboBox with attribute names
         CbxAttributes.Items.Clear()
-        For Each attributeName As String In AttributesDictionary.Keys
+        For Each attributeName As String In ProductAttributesDictionary.Keys
             CbxAttributes.Items.Add(attributeName)
         Next
 
@@ -243,7 +243,7 @@ Public Class LicenseViewfrm
                 CbxCustomer.Text = ULicense.Customer.Name.ToString
                 TxtEMail.Text = ULicense.Customer.Email.ToString
                 CbxUsers.Text = ULicense.Quantity.ToString
-                AttributesDictionary = ULicense.AdditionalAttributes.GetAll()
+                LicenseAttributesDictionary = ULicense.AdditionalAttributes.GetAll()
                 CbxLicenseType.Text = ULicense.Type.ToString
                 ProductFeatureDictionary = ULicense.ProductFeatures.GetAll()
                 DtpExpiration.Value = ULicense.Expiration
@@ -262,32 +262,49 @@ Public Class LicenseViewfrm
         ' Check if an attribute is selected in the ComboBox
         If CbxAttributes.SelectedIndex <> -1 Then
             Dim selectedAttribute As String = CbxAttributes.SelectedItem.ToString()
-            TxtAttributeValue.Text = AttributesDictionary(selectedAttribute) ' Display the value in the TextBox
+            If LicenseAttributesDictionary.ContainsKey(selectedAttribute) Then
+                TxtAttributeValue.Text = LicenseAttributesDictionary(selectedAttribute) ' Display the value in the TextBox
+            Else
+                TxtAttributeValue.Text = String.Empty 'Clear the TextBox or set a default value
+                LicenseAttributesDictionary = GetAttributesDictionary(CurrentProductID)
+            End If
         End If
     End Sub
 
+    ' Loads client details into the form fields based on the clientID.
     Private Sub LoadClientDetails(clientID As Integer)
-        ' Query to retrieve specific client details
-        Dim query As String = "SELECT Email, Country, City, State, Postal, Phone, Company, Address, Comment FROM Clients WHERE ClientID = @ClientID"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ClientID", clientID)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                If reader.Read() Then
-                    ' Update UI with client details from the database
-                    CbxCountry.Text = reader("Country").ToString()
-                    TxtEMail.Text = reader("Email").ToString()
-                    CbxCity.Text = reader("City").ToString()
-                    CbxState.Text = reader("State").ToString()
-                    CbxPostal.Text = reader("Postal").ToString()
-                    TxtPhone.Text = reader("Phone").ToString()
-                    CbxCompany.Text = reader("Company").ToString()
-                    TxtAddress.Text = reader("Address").ToString()
-                    TxtComment.Text = reader("Comment").ToString()
-                Else
-                    MessageBox.Show("No details found for the selected client.")
-                End If
-            End Using
-        End Using
+        ' Get the client data using the existing function.
+        Dim clientDetails As List(Of EditableKeyValuePair) = GetClientDataByClientID(clientID)
+
+        ' Check if client details were retrieved
+        If clientDetails.Count > 0 Then
+            ' Update the UI fields based on the retrieved key-value pairs
+            For Each detail As EditableKeyValuePair In clientDetails
+                Select Case detail.Key
+                    Case "Email"
+                        TxtEMail.Text = detail.Value.ToString()
+                    Case "Country"
+                        CbxCountry.Text = detail.Value.ToString()
+                    Case "City"
+                        CbxCity.Text = detail.Value.ToString()
+                    Case "State"
+                        CbxState.Text = detail.Value.ToString()
+                    Case "Postal"
+                        CbxPostal.Text = detail.Value.ToString()
+                    Case "Phone"
+                        TxtPhone.Text = detail.Value.ToString()
+                    Case "Company"
+                        CbxCompany.Text = detail.Value.ToString()
+                    Case "Address"
+                        TxtAddress.Text = detail.Value.ToString()
+                    Case "Comment"
+                        TxtComment.Text = detail.Value.ToString()
+                End Select
+            Next
+        Else
+            ' Show a message if no details are found.
+            MessageBox.Show("No details found for the selected client.")
+        End If
     End Sub
 
     Private Sub SelectFeatures()
@@ -316,7 +333,12 @@ Public Class LicenseViewfrm
         ' Check if an attribute is selected in the ComboBox
         If CbxAttributes.SelectedIndex <> -1 Then
             Dim selectedAttribute As String = CbxAttributes.SelectedItem.ToString()
-            TxtAttributeValue.Text = AttributesDictionary(selectedAttribute) ' Display the value in the TextBox
+            If ProductAttributesDictionary.ContainsKey(selectedAttribute) Then
+                TxtAttributeValue.Text = ProductAttributesDictionary(selectedAttribute) ' Display the value in the TextBox
+            Else
+                ' Handle the case where the attribute is not found in the dictionary
+                TxtAttributeValue.Text = String.Empty ' Clear the TextBox or set a default value
+            End If
         End If
     End Sub
 
@@ -326,8 +348,8 @@ Public Class LicenseViewfrm
             Dim selectedAttribute As String = CbxAttributes.SelectedItem.ToString()
             Dim newValue As String = TxtAttributeValue.Text ' Get the new value from the TextBox
             ' Update the dictionary
-            If AttributesDictionary.ContainsKey(selectedAttribute) Then
-                AttributesDictionary(selectedAttribute) = newValue
+            If LicenseAttributesDictionary.ContainsKey(selectedAttribute) Then
+                LicenseAttributesDictionary(selectedAttribute) = newValue
             End If
             MessageBox.Show("Value updated successfully.")
         Else
@@ -393,14 +415,14 @@ Public Class LicenseViewfrm
             ' Create the license with specified parameters
             Try
                 ULicense = License.[New]() _
-        .WithUniqueIdentifier(licenseId) _
-        .As(GetLicenseType(CbxLicenseType.Text)) _
-        .WithMaximumUtilization(CbxUsers.Text) _
-        .WithAdditionalAttributes(AttributesDictionary) _
-        .WithProductFeatures(ProductFeatureDictionary) _
-        .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
-        .ExpiresAt(CDate(DtpExpiration.Text)) _
-        .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
+                .WithUniqueIdentifier(licenseId) _
+                .As(GetLicenseType(CbxLicenseType.Text)) _
+                .WithMaximumUtilization(CbxUsers.Text) _
+                .WithAdditionalAttributes(LicenseAttributesDictionary) _
+                .WithProductFeatures(ProductFeatureDictionary) _
+                .LicensedTo(CbxCustomer.Text, TxtEMail.Text) _
+                .ExpiresAt(CDate(DtpExpiration.Text)) _
+                .CreateAndSignWithPrivateKey(Me.PrivateKey, productpassword)
             Catch ex As Exception
                 MessageBox.Show("Error signing the license: " & ex.Message)
                 Return
@@ -420,7 +442,7 @@ Public Class LicenseViewfrm
             File.WriteAllText(licenseFileName, ULicense.ToString(), Encoding.UTF8)
 
             ' Save license information in the database or wherever necessary
-            UpdateLicenseInfo(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
+            UpdateLicenseInfoOnDatabase(licenseId.ToString(), clientID, base64LicenseId, CDate(DtpExpiration.Text), CurrentProductID)
 
             UpdateClientsInfo(clientID)
 
@@ -471,23 +493,24 @@ Public Class LicenseViewfrm
         End If
     End Sub
 
+    ' Updates client information in the database based on the provided client ID.
     Private Sub UpdateClientsInfo(clientId As Integer)
-        ' Update client details in the database
-        Dim queryClients As String = "UPDATE Clients SET Name = @ClientName, Email = @ClientEmail, Country = @ClientCountry, State = @ClientState, City = @ClientCity, Address = @ClientAddress, Postal = @ClientPostal, Phone = @ClientPhone, Company = @ClientCompany, Comment = @ClientComment  Where ClientID = @ClientID;"
-        Using cmd As New SQLiteCommand(queryClients, conn)
-            cmd.Parameters.AddWithValue("@ClientID", clientId)
-            cmd.Parameters.AddWithValue("@ClientName", CbxCustomer.Text)
-            cmd.Parameters.AddWithValue("@ClientEmail", TxtEMail.Text)
-            cmd.Parameters.AddWithValue("@ClientCountry", CbxCountry.Text)
-            cmd.Parameters.AddWithValue("@ClientState", CbxState.Text)
-            cmd.Parameters.AddWithValue("@ClientCity", CbxCity.Text)
-            cmd.Parameters.AddWithValue("@ClientAddress", TxtAddress.Text)
-            cmd.Parameters.AddWithValue("@ClientPostal", CbxPostal.Text)
-            cmd.Parameters.AddWithValue("@ClientPhone", RemoveNonNumericCharacters(TxtPhone.Text))
-            cmd.Parameters.AddWithValue("@ClientCompany", CbxCompany.Text)
-            cmd.Parameters.AddWithValue("@ClientComment", TxtComment.Text)
-            cmd.ExecuteNonQuery()
-        End Using
+        ' Create a list to hold updated client data as key-value pairs.
+        Dim updatedData As New List(Of EditableKeyValuePair) From {
+        New EditableKeyValuePair("Name", CbxCustomer.Text),         ' Client's name from combo box
+        New EditableKeyValuePair("Email", TxtEMail.Text),         ' Client's email from text box
+        New EditableKeyValuePair("Country", CbxCountry.Text),     ' Client's country from combo box
+        New EditableKeyValuePair("State", CbxState.Text),         ' Client's state from combo box
+        New EditableKeyValuePair("City", CbxCity.Text),           ' Client's city from combo box
+        New EditableKeyValuePair("Address", TxtAddress.Text),     ' Client's address from text box
+        New EditableKeyValuePair("Postal", CbxPostal.Text),       ' Client's postal code from combo box
+        New EditableKeyValuePair("Phone", RemoveNonNumericCharacters(TxtPhone.Text)), ' Clean phone number
+        New EditableKeyValuePair("Company", CbxCompany.Text),     ' Client's company from combo box
+        New EditableKeyValuePair("Comment", TxtComment.Text)      ' Client's comment from text box
+    }
+
+        ' Call the UpdateClient function to perform the update
+        UpdateClient(updatedData, clientId)
     End Sub
 
     Private Sub BtnNewLic_Click(sender As Object, e As EventArgs) Handles BtnNewLic.Click
@@ -593,19 +616,20 @@ Public Class LicenseViewfrm
         End Using
     End Sub
 
+    ' Loads clients into the ComboBox from the database.
     Private Sub LoadClientsIntoComboBox()
-        Dim query As String = "SELECT ClientID, Name FROM Clients ORDER BY Name"
-        Using cmd As New SQLiteCommand(query, conn)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                CbxCustomer.Items.Clear()  ' Clear the ComboBox before filling it
-                While reader.Read()
-                    Dim clientId As Integer = Convert.ToInt32(reader("ClientID"))
-                    Dim clientName As String = reader("Name").ToString()
-                    CbxCustomer.Items.Add(New ComboBoxItem(clientId, clientName))
-                End While
-            End Using
-        End Using
+        ' Get the list of clients from the database
+        Dim clients = GetClients()
+
+        ' Clear the ComboBox before filling it
+        CbxCustomer.Items.Clear()
+
+        ' Populate the ComboBox with clients
+        For Each client In clients
+            CbxCustomer.Items.Add(New ComboBoxItem(client.ID, client.Name)) ' Add each client to the ComboBox
+        Next
     End Sub
+
 
     Private Sub CbxCustomer_DrawItem(sender As Object, e As DrawItemEventArgs) Handles CbxCustomer.DrawItem
         e.DrawBackground()

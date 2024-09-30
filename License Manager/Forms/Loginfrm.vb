@@ -1,8 +1,6 @@
-Imports System.Data.SQLite
 Imports System.IO
 
 Public Class Loginfrm
-
     ' This method is called when the login form loads.
     Private Sub Loginfrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' Check if the database exists and create tables and a default user if necessary.
@@ -23,6 +21,7 @@ Public Class Loginfrm
     Private Sub OK_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles OK.Click
         ' Attempt to authenticate the user.
         If AuthenticateUser(UsernameTextBox.Text, PasswordTextBox.Text) Then
+            SignedUser = UsernameTextBox.Text  ' Set the globally signed-in user
             ' If authentication is successful, show the main form and close the login form.
             Mainfrm.Show()
             Me.Close()

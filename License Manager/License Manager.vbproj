@@ -76,7 +76,17 @@
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
-   <ItemGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>8A879B6D1BD53675359376C8BA4719AE6F2DA49E</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>true</GenerateManifests>
+  </PropertyGroup>
+  <ItemGroup>
     <Reference Include="BouncyCastle.Cryptography, Version=2.0.0.0, Culture=neutral, PublicKeyToken=072edcf4a5328938, processorArchitecture=MSIL">
       <HintPath>..\packages\BouncyCastle.Cryptography.2.4.0\lib\net461\BouncyCastle.Cryptography.dll</HintPath>
     </Reference>
@@ -91,6 +101,7 @@
     </Reference>
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Messaging" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -112,31 +123,34 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LicenseViewfrm.Designer.vb">
+    <Compile Include="Handlers\ClientHandler.vb" />
+    <Compile Include="Handlers\ProductHandler.vb" />
+    <Compile Include="Handlers\LicenseHandler.vb" />
+    <Compile Include="Forms\LicenseViewfrm.Designer.vb">
       <DependentUpon>LicenseViewfrm.vb</DependentUpon>
     </Compile>
-    <Compile Include="LicenseViewfrm.vb">
+    <Compile Include="Forms\LicenseViewfrm.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Mainfrm.Designer.vb">
+    <Compile Include="Forms\Mainfrm.Designer.vb">
       <DependentUpon>Mainfrm.vb</DependentUpon>
     </Compile>
-    <Compile Include="Mainfrm.vb">
+    <Compile Include="Forms\Mainfrm.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="NewProductfrm.Designer.vb">
+    <Compile Include="Forms\NewProductfrm.Designer.vb">
       <DependentUpon>NewProductfrm.vb</DependentUpon>
     </Compile>
-    <Compile Include="NewProductfrm.vb">
+    <Compile Include="Forms\NewProductfrm.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Loginfrm.Designer.vb">
+    <Compile Include="Forms\Loginfrm.Designer.vb">
       <DependentUpon>Loginfrm.vb</DependentUpon>
     </Compile>
-    <Compile Include="Loginfrm.vb">
+    <Compile Include="Forms\Loginfrm.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FunctionsModule.vb" />
+    <Compile Include="Handlers\MainModule.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -153,18 +167,19 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="Handlers\UserHandler.vb" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="LicenseViewfrm.resx">
+    <EmbeddedResource Include="Forms\LicenseViewfrm.resx">
       <DependentUpon>LicenseViewfrm.vb</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Mainfrm.resx">
+    <EmbeddedResource Include="Forms\Mainfrm.resx">
       <DependentUpon>Mainfrm.vb</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="NewProductfrm.resx">
+    <EmbeddedResource Include="Forms\NewProductfrm.resx">
       <DependentUpon>NewProductfrm.vb</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Loginfrm.resx">
+    <EmbeddedResource Include="Forms\Loginfrm.resx">
       <DependentUpon>Loginfrm.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">

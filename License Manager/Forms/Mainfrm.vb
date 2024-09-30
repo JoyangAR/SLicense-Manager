@@ -16,70 +16,53 @@ Public Class Mainfrm
         LoadUsersToLstUser()                             ' Load all users into the ListBox for user management.
         LoadClientNames()                                ' Load all client names into the ListBox for client management.
         InitializeFilterComboBox()                       ' Initialize the filter ComboBox with options based on client data fields.
-        ConfigureUserPermissions()                       ' Check and set permissions for the currently signed-in user.
-        Me.Text = $"License Manager User: {SignedUser}"  ' Set the form's title to include the signed-in user's name for a personalized touch.
+        SetGlobalUserPermissions()                       ' Get and set user permissions for the currently signed-in user.
+        UpdateControlsOnPermissions()                    ' Set Controls based on permissions for the currently signed-in user.
+        Me.Text = $"License Manager User: {SignedUser}"  ' Set the form's title to include the signed-in user's name.
     End Sub
 
-
-    ' Load user names into the lstuser ListBox.
+    ' Loads user names into the LbxUsers ListBox.
     Private Sub LoadUsersToLstUser()
-        ' Define SQL command to select user names from the Users table.
-        Dim query As String = "SELECT User FROM Users"
-        Using cmd As New SQLiteCommand(query, conn)
-            ' Execute the command and read the results.
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                ' Clear any existing items in the ListBox before loading new data.
-                LbxUsers.Items.Clear()
+        ' Clear any existing items in the ListBox before loading new data.
+        LbxUsers.Items.Clear()
 
-                ' Read each record individually.
-                While reader.Read()
-                    ' Add each user name to the ListBox.
-                    LbxUsers.Items.Add(reader("User").ToString())
-                End While
-            End Using
-        End Using
+        ' Call the function to get the list of user names.
+        Dim users As List(Of String) = GetUsers()
+
+        ' Add each user name to the ListBox.
+        For Each user As String In users
+            LbxUsers.Items.Add(user)
+        Next
     End Sub
 
-
-    ' Load client names and IDs into the LbxClients ListBox and a global list.
+    ' Loads client names and IDs into the LbxClients ListBox and the AllClients list.
     Private Sub LoadClientNames()
         LbxClients.Items.Clear()
-        AllClients.Clear()  ' Ensure to clear the global list as well
+        AllClients.Clear()  ' Clear the global list
 
-        Dim query As String = "SELECT DISTINCT Clients.ClientID, Clients.Name FROM Clients;"
+        ' Call the function to get the list of clients
+        Dim clients As List(Of Object) = GetClients()
 
-        Using cmd As New SQLiteCommand(query, conn)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    Dim clientID As Integer = Convert.ToInt32(reader("ClientID"))
-                    Dim clientName As String = reader("Name").ToString()
-                    Dim client = New With {.Name = clientName, .ID = clientID}
-
-                    LbxClients.Items.Add(client)
-                    AllClients.Add(client)  ' Add the client to the global list
-                End While
-            End Using
-        End Using
+        ' Populate the ListBox and the AllClients list
+        For Each client In clients
+            LbxClients.Items.Add(client)
+            AllClients.Add(client)
+        Next
     End Sub
 
-    ' Load product names and IDs into the LbxProducts ListBox and a dictionary.
+    ' Loads the product names and IDs into the LbxProducts ListBox and the AllProducts list.
     Private Sub LoadProducts()
         LbxProducts.Items.Clear()
         AllProducts.Clear()
 
-        Dim query As String = "SELECT ProductID, ProductName FROM Products;"
-        Using cmd As New SQLiteCommand(query, conn)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    Dim productID As Integer = Convert.ToInt32(reader("ProductID"))
-                    Dim productName As String = reader("ProductName").ToString()
-                    Dim product = New With {.Name = productName, .ID = productID}
+        ' Call the function to get the list of products
+        Dim products As List(Of Object) = GetProducts()
 
-                    LbxProducts.Items.Add(product)
-                    AllProducts.Add(product)  ' Map productName to productID
-                End While
-            End Using
-        End Using
+        ' Populate the ListBox and the AllProducts list
+        For Each product In products
+            LbxProducts.Items.Add(product)
+            AllProducts.Add(product)
+        Next
     End Sub
 
     ' Custom drawing of items in LbxClients ListBox.
@@ -130,38 +113,35 @@ Public Class Mainfrm
         Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
         Dim ProductID = selectedProduct.ID
 
-        LoadFeaturesIntoLbxFeatures(productID)
-        LoadAttributesIntoLbxAttributes(productID)
+        LoadFeaturesIntoLbxFeatures(ProductID)
+        LoadAttributesIntoLbxAttributes(ProductID)
     End Sub
 
-    ' Load features related to the selected product into LbxFeatures list box.
+    ' Loads the features related to the selected product into the LbxFeatures ListBox.
     Private Sub LoadFeaturesIntoLbxFeatures(productID As Integer)
         LbxFeatures.Items.Clear()
 
-        Dim query As String = "SELECT FeatureName FROM Features WHERE ProductID = @ProductID"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", productID)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    LbxFeatures.Items.Add(reader("FeatureName").ToString())
-                End While
-            End Using
-        End Using
+        ' Call the function to get the features
+        Dim features As List(Of String) = GetFeaturesList(productID)
+
+        ' Add the obtained features to the ListBox
+        For Each feature As String In features
+            LbxFeatures.Items.Add(feature)
+        Next
     End Sub
 
     ' Load attributes related to the selected product into LbxAttributes list box.
     Private Sub LoadAttributesIntoLbxAttributes(productID As Integer)
         LbxAttributes.Items.Clear()
 
-        Dim query As String = "SELECT AttributeName FROM Attributes WHERE ProductID = @ProductID"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", productID)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                While reader.Read()
-                    LbxAttributes.Items.Add(reader("AttributeName").ToString())
-                End While
-            End Using
-        End Using
+
+        ' Call the function to get the features
+        Dim attributes As List(Of String) = GetAttributesList(productID)
+
+        ' Add the obtained features to the ListBox
+        For Each attribute As String In attributes
+            LbxAttributes.Items.Add(attribute)
+        Next
     End Sub
 
     Private Sub BtnFeatureAdd_Click(sender As Object, e As EventArgs) Handles BtnFeatureAdd.Click
@@ -173,7 +153,7 @@ Public Class Mainfrm
 
         Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
         Dim ProductID = selectedProduct.ID
-        If productID = -1 Then
+        If ProductID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
         End If
@@ -186,13 +166,13 @@ Public Class Mainfrm
         End If
 
         ' Check if the feature already exists
-        If FeatureExists(productID, featureName) Then
+        If FeatureExists(ProductID, featureName) Then
             MessageBox.Show("A feature with this name already exists for this product.")
             Return
         End If
 
         ' Insert the new feature into the database
-        If AddFeatureToDatabase(productID, featureName) Then
+        If AddFeature(ProductID, featureName) Then
             MessageBox.Show("Feature successfully added.")
             LoadFeaturesIntoLbxFeatures(ProductID)
         Else
@@ -209,7 +189,7 @@ Public Class Mainfrm
 
         Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
         Dim ProductID = selectedProduct.ID
-        If productID = -1 Then
+        If ProductID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
         End If
@@ -222,13 +202,13 @@ Public Class Mainfrm
         End If
 
         ' Check if the attribute already exists
-        If AttributeExists(productID, attributeName) Then
+        If AttributeExists(ProductID, attributeName) Then
             MessageBox.Show("An attribute with this name already exists for this product.")
             Return
         End If
 
         ' Insert the new attribute into the database
-        If AddAttributeToDatabase(productID, attributeName) Then
+        If AddAttribute(ProductID, attributeName) Then
             MessageBox.Show("Attribute successfully added.")
             LoadAttributesIntoLbxAttributes(ProductID)
         Else
@@ -246,20 +226,19 @@ Public Class Mainfrm
         Dim featureName As String = LbxFeatures.SelectedItem.ToString()
         Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
         Dim ProductID = selectedProduct.ID
-        If productID = -1 Then
+        If ProductID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
         End If
 
         ' Delete the feature from the database
-        If DeleteFeatureFromDatabase(productID, featureName) Then
+        If DeleteFeature(ProductID, featureName) Then
             MessageBox.Show("Feature successfully deleted.")
             LoadFeaturesIntoLbxFeatures(ProductID)
         Else
             MessageBox.Show("Error deleting the feature.")
         End If
     End Sub
-
 
     Private Sub BtnAttributeDelete_Click(sender As Object, e As EventArgs) Handles BtnAttributeDelete.Click
         ' Get the ProductID of the product selected in the list
@@ -271,15 +250,15 @@ Public Class Mainfrm
         Dim attributeName As String = LbxAttributes.SelectedItem.ToString()
         Dim selectedProduct = DirectCast(LbxProducts.SelectedItem, Object)
         Dim ProductID = selectedProduct.ID
-        If productID = -1 Then
+        If ProductID = -1 Then
             MessageBox.Show("The selected product could not be found.")
             Return
         End If
 
         ' Delete the attribute from the database
-        If DeleteAttributeFromDatabase(productID, attributeName) Then
+        If DeleteAttribute(ProductID, attributeName) Then
             MessageBox.Show("Attribute successfully deleted.")
-            LoadAttributesIntoLbxAttributes(productID)
+            LoadAttributesIntoLbxAttributes(ProductID)
         Else
             MessageBox.Show("Error deleting the attribute.")
         End If
@@ -301,9 +280,9 @@ Public Class Mainfrm
         Next
     End Sub
 
-
     Private Sub BtnAddUser_Click(sender As Object, e As EventArgs) Handles BtnAddUser.Click
         Dim NewUserName = InputBox("Enter new Username")
+        ' Check if a user was writen
         If String.IsNullOrWhiteSpace(NewUserName) Then
             MessageBox.Show("Username cannot be empty.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
@@ -316,42 +295,44 @@ Public Class Mainfrm
         End If
 
         Dim NewPassword = InputBox("Enter new Password")
+        ' Check if a password was writen
         If String.IsNullOrWhiteSpace(NewPassword) Then
             MessageBox.Show("Password cannot be empty.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
         End If
 
-        ' Insert new user
-        Dim insertQuery As String = "INSERT INTO Users (User, Password, IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, EditLics, ExportKeys, OnlyTrials, MaxTrialDays) VALUES (@User, @Password, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)"
-        Using cmd As New SQLiteCommand(insertQuery, conn)
-            cmd.Parameters.AddWithValue("@User", NewUserName)
-            cmd.Parameters.AddWithValue("@Password", EncodeToBase64(NewPassword))
-            cmd.ExecuteNonQuery()
-        End Using
+        If Not InsertUser(NewUserName, NewPassword) Then
+            MessageBox.Show("Error inserting user.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Else
+            MessageBox.Show("New user added successfully.", "User Added", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
 
         LoadUsersToLstUser()
-        MessageBox.Show("New user added successfully.", "User Added", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
     Private Sub BtnChangePassword_Click(sender As Object, e As EventArgs) Handles BtnChangePassword.Click
+        If LbxUsers.SelectedIndex = -1 Then
+            MessageBox.Show("Please select a user first.")
+            Exit Sub
+        End If
         Dim NewPassword = InputBox("Enter new Password")
-
-        ' Update user's password
-        Dim updateQuery As String = "UPDATE Users SET Password = @Password WHERE User = @User;"
-        Using cmd As New SQLiteCommand(updateQuery, conn)
-            cmd.Parameters.AddWithValue("@Password", EncodeToBase64(NewPassword))
-            cmd.Parameters.AddWithValue("@User", LbxUsers.SelectedItem.ToString())
-            cmd.ExecuteNonQuery()
-        End Using
+        If Not UpdatePassword(LbxUsers.SelectedItem.ToString(), NewPassword) Then
+            MessageBox.Show("Error updating password.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End If
     End Sub
 
     Private Sub BtnDeleteUser_Click(sender As Object, e As EventArgs) Handles BtnDeleteUser.Click
-        ' Delete user
-        Dim deleteQuery As String = "DELETE FROM Users WHERE User = @User;"
-        Using cmd As New SQLiteCommand(deleteQuery, conn)
-            cmd.Parameters.AddWithValue("@User", LbxUsers.SelectedItem.ToString())
-            cmd.ExecuteNonQuery()
-        End Using
+        If LbxUsers.SelectedIndex = -1 Then
+            MessageBox.Show("Please select a user first.")
+            Exit Sub
+        End If
+        If Not DeleteUser(LbxUsers.SelectedItem.ToString()) Then
+            MessageBox.Show("Error deleting user.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Else
+            MessageBox.Show("User deleted successfully.", "User Deleted", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+
+        LoadUsersToLstUser()
     End Sub
 
     Private Sub TxtClientSearch_TextChanged(sender As Object, e As EventArgs) Handles TxtClientSearch.TextChanged
@@ -388,21 +369,20 @@ Public Class Mainfrm
         End If
     End Sub
 
-
+    ' Initializes the Filter ComboBox with the column names from the Clients table.
     Private Sub InitializeFilterComboBox()
-        ' Query to fetch column names from the Clients table
-        Dim query As String = "PRAGMA table_info(Clients);"
-        Using cmd As New SQLiteCommand(query, conn)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                cbxFilters.Items.Clear()
-                While reader.Read()
-                    ' Column name is at index 1 in the result set
-                    cbxFilters.Items.Add(reader.GetString(1))
-                End While
-            End Using
-        End Using
+        ' Clear existing items in the ComboBox.
+        cbxFilters.Items.Clear()
 
-        ' Set the selected index to the first item, if there are any items
+        ' Get the list of client fields using the existing function.
+        Dim clientFields As List(Of EditableKeyValuePair) = GetClientFields()
+
+        ' Add each field name to the ComboBox.
+        For Each field As EditableKeyValuePair In clientFields
+            cbxFilters.Items.Add(field.Key)
+        Next
+
+        ' Set the selected index to the first item, if there are any items.
         If cbxFilters.Items.Count > 0 Then cbxFilters.SelectedIndex = 0
     End Sub
 
@@ -410,24 +390,14 @@ Public Class Mainfrm
         FilterData()
     End Sub
 
+    ' Loads client data into the ClientsDataGrid based on the given client ID.
     Private Sub LoadClientData(clientId As Integer)
-        Dim query As String = "SELECT * FROM Clients WHERE ClientID = @ClientID"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ClientID", clientId)
+        ' Call the function to get the client data
+        Dim clientDetails As List(Of EditableKeyValuePair) = GetClientDataByClientID(clientId)
 
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                Dim clientDetails As New List(Of EditableKeyValuePair)
-
-                If reader.Read() Then
-                    For i As Integer = 0 To reader.FieldCount - 1
-                        clientDetails.Add(New EditableKeyValuePair(reader.GetName(i), reader.GetValue(i)))
-                    Next
-                End If
-
-                ClientsDataGrid.DataSource = clientDetails
-                FormatDataGridView()
-            End Using
-        End Using
+        ' Set the data source of the DataGridView and format the grid
+        ClientsDataGrid.DataSource = clientDetails
+        FormatDataGridView()
     End Sub
 
     Private Sub FormatDataGridView()
@@ -511,55 +481,38 @@ Public Class Mainfrm
         End If
     End Sub
 
-    Private Sub ConfigureUserPermissions()
-        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @SignedUser"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@SignedUser", SignedUser)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                If reader.Read() Then
-                    isAdmin = Convert.ToBoolean(reader("IsAdmin"))
-                    canEditClients = Convert.ToBoolean(reader("EditClients"))
-                    canEditProducts = Convert.ToBoolean(reader("EditProducts"))
-                    canDeleteClients = Convert.ToBoolean(reader("DeleteClients"))
-                    canDeleteProducts = Convert.ToBoolean(reader("DeleteProducts"))
-                    canExportLics = Convert.ToBoolean(reader("ExportLics"))
-                    canExportKeys = Convert.ToBoolean(reader("ExportKeys"))
-                    canEditLics = Convert.ToBoolean(reader("EditLics"))
-                    canOnlyTrials = Convert.ToBoolean(reader("OnlyTrials"))
-                    canMaxDays = reader("MaxTrialDays")
-                    ' Enable or disable controls based on permissions
-                    If isAdmin Then
-                        Exit Sub  ' Admin has all permissions, no need to disable any controls
-                    Else
-                        ' Set controls based on specific permissions
-                        BtnNewClient.Enabled = canEditClients
-                        BtnSaveClientChanges.Enabled = canEditClients
-                        BtnAddProduct.Enabled = canEditProducts
-                        BtnAttributeAdd.Enabled = canEditProducts
-                        BtnAttributeDelete.Enabled = canEditProducts
-                        BtnFeatureAdd.Enabled = canEditProducts
-                        BtnFeatureDelete.Enabled = canEditProducts
-                        BtnDeleteClient.Enabled = canDeleteClients
-                        BtnRemoveProduct.Enabled = canDeleteProducts
-                        BtnDeleteUser.Enabled = isAdmin
-                        BtnAddUser.Enabled = isAdmin
-                        BtnChangePassword.Enabled = isAdmin
-                        ChkPermissionAdmin.Enabled = isAdmin
-                        ChkPermissionCreateEditClients.Enabled = isAdmin
-                        ChkPermissionCreateEditProducts.Enabled = isAdmin
-                        ChkPermissionDeleteProducts.Enabled = isAdmin
-                        ChkPermissionDeleteClients.Enabled = isAdmin
-                        ChkPermissionEditLics.Enabled = isAdmin
-                        ChkPermissionExportLics.Enabled = isAdmin
-                        ChkPermissionExportKeys.Enabled = isAdmin
-                        ChkPermissionOnlyTrials.Enabled = isAdmin
-                        TxtMaxTrial.Enabled = isAdmin
-                        BtnApplyPermission.Enabled = isAdmin
-                        Label7.Enabled = isAdmin
-                    End If
-                End If
-            End Using
-        End Using
+    Private Sub UpdateControlsOnPermissions()
+        ' Enable or disable controls based on permissions
+        If isAdmin Then
+            Exit Sub  ' Admin has all permissions, no need to disable any controls
+        Else
+            ' Set controls based on specific permissions
+            BtnNewClient.Enabled = canEditClients
+            BtnSaveClientChanges.Enabled = canEditClients
+            BtnAddProduct.Enabled = canEditProducts
+            BtnAttributeAdd.Enabled = canEditProducts
+            BtnAttributeDelete.Enabled = canEditProducts
+            BtnFeatureAdd.Enabled = canEditProducts
+            BtnFeatureDelete.Enabled = canEditProducts
+            BtnDeleteClient.Enabled = canDeleteClients
+            BtnRemoveProduct.Enabled = canDeleteProducts
+            BtnDeleteUser.Enabled = isAdmin
+            BtnAddUser.Enabled = isAdmin
+            BtnChangePassword.Enabled = isAdmin
+            ChkPermissionAdmin.Enabled = isAdmin
+            ChkPermissionCreateEditClients.Enabled = isAdmin
+            ChkPermissionCreateEditProducts.Enabled = isAdmin
+            ChkPermissionDeleteProducts.Enabled = isAdmin
+            ChkPermissionDeleteClients.Enabled = isAdmin
+            ChkPermissionEditLics.Enabled = isAdmin
+            ChkPermissionExportLics.Enabled = isAdmin
+            ChkPermissionExportKeys.Enabled = isAdmin
+            ChkPermissionOnlyTrials.Enabled = isAdmin
+            TxtMaxTrial.Enabled = isAdmin
+            BtnApplyPermission.Enabled = isAdmin
+            Label7.Enabled = isAdmin
+        End If
+
     End Sub
 
     Private Sub BtnNewClient_Click(sender As Object, e As EventArgs) Handles BtnNewClient.Click
@@ -569,70 +522,37 @@ Public Class Mainfrm
         FormatDataGridView()
     End Sub
 
-    Private Sub UpdateUserPermissionBool(permission As String, value As Boolean)
-        If LbxUsers.SelectedIndex = -1 Then
-            MessageBox.Show("Please select a user first.")
-            Return
-        End If
-
-        Dim selectedUser As String = LbxUsers.SelectedItem.ToString()
-
-        Dim query As String = $"UPDATE Users SET {permission} = @Value WHERE User = @UserName"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@Value", value)
-            cmd.Parameters.AddWithValue("@UserName", selectedUser)
-            cmd.ExecuteNonQuery()
-        End Using
-    End Sub
-    Private Sub UpdateUserPermisionInt(permission As String, value As Integer)
-        If LbxUsers.SelectedIndex = -1 Then
-            MessageBox.Show("Please select a user first.")
-            Return
-        End If
-
-        Dim selectedUser As String = LbxUsers.SelectedItem.ToString()
-
-        Dim query As String = $"UPDATE Users SET {permission} = @Value WHERE User = @UserName"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@Value", value)
-            cmd.Parameters.AddWithValue("@UserName", selectedUser)
-            cmd.ExecuteNonQuery()
-        End Using
-    End Sub
-
     Private Sub LbxUsers_SelectedIndexChanged(sender As Object, e As EventArgs) Handles LbxUsers.SelectedIndexChanged
         If LbxUsers.SelectedIndex = -1 Then Return
 
         Dim selectedUser As String = LbxUsers.SelectedItem.ToString()
-        LoadUserPermissions(selectedUser)
+        ShowUserPermissions(selectedUser)
     End Sub
 
-    Private Sub LoadUserPermissions(userName As String)
-        Dim query As String = "SELECT IsAdmin, EditClients, EditProducts, DeleteClients, DeleteProducts, ExportLics, ExportKeys, EditLics, OnlyTrials, MaxTrialDays FROM Users WHERE User = @User"
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@User", userName)
-            Using reader As SQLiteDataReader = cmd.ExecuteReader()
-                If reader.Read() Then
-                    ' Update each CheckBox based on user data
-                    ChkPermissionAdmin.Checked = Convert.ToBoolean(reader("IsAdmin"))
-                    ChkPermissionCreateEditClients.Checked = Convert.ToBoolean(reader("EditClients"))
-                    ChkPermissionCreateEditProducts.Checked = Convert.ToBoolean(reader("EditProducts"))
-                    ChkPermissionDeleteClients.Checked = Convert.ToBoolean(reader("DeleteClients"))
-                    ChkPermissionDeleteProducts.Checked = Convert.ToBoolean(reader("DeleteProducts"))
-                    ChkPermissionEditLics.Checked = Convert.ToBoolean(reader("EditLics"))
-                    ChkPermissionExportLics.Checked = Convert.ToBoolean(reader("ExportLics"))
-                    ChkPermissionExportKeys.Checked = Convert.ToBoolean(reader("ExportKeys"))
-                    ChkPermissionOnlyTrials.Checked = Convert.ToBoolean(reader("OnlyTrials"))
-                    TxtMaxTrial.Text = reader("MaxTrialDays")
-                Else
-                    ' Uncheck all CheckBoxes if no data found
-                    ClearAllCheckBoxes()
-                End If
-            End Using
-        End Using
+    ' Loads the user permissions from the database and updates the CheckBoxes and TextBox.
+    Private Sub ShowUserPermissions(userName As String)
+        ' Call the function to get the user permissions
+        Dim permissions As Dictionary(Of String, Object) = GetUserPermissionsDictionary(userName)
+
+        If permissions.Count > 0 Then
+            ' Update each CheckBox and TextBox based on the retrieved permissions
+            ChkPermissionAdmin.Checked = permissions("IsAdmin")
+            ChkPermissionCreateEditClients.Checked = permissions("EditClients")
+            ChkPermissionCreateEditProducts.Checked = permissions("EditProducts")
+            ChkPermissionDeleteClients.Checked = permissions("DeleteClients")
+            ChkPermissionDeleteProducts.Checked = permissions("DeleteProducts")
+            ChkPermissionEditLics.Checked = permissions("EditLics")
+            ChkPermissionExportLics.Checked = permissions("ExportLics")
+            ChkPermissionExportKeys.Checked = permissions("ExportKeys")
+            ChkPermissionOnlyTrials.Checked = permissions("OnlyTrials")
+            TxtMaxTrial.Text = permissions("MaxTrialDays").ToString()
+        Else
+            ' Clear the CheckBoxes if no data is found
+            ClearAllUserCheckBoxes()
+        End If
     End Sub
 
-    Private Sub ClearAllCheckBoxes()
+    Private Sub ClearAllUserCheckBoxes()
         ChkPermissionAdmin.Checked = False
         ChkPermissionCreateEditClients.Checked = False
         ChkPermissionCreateEditProducts.Checked = False
@@ -646,17 +566,22 @@ Public Class Mainfrm
     End Sub
 
     Private Sub BtnApplyPermission_Click(sender As Object, e As EventArgs) Handles BtnApplyPermission.Click
+        If LbxUsers.SelectedIndex = -1 Then
+            MessageBox.Show("Please select a user first.")
+            Exit Sub
+        End If
+        Dim SelectedUser As String = LbxUsers.SelectedItem.ToString()
         ' Update each user permission based on CheckBox states
-        UpdateUserPermissionBool("IsAdmin", ChkPermissionAdmin.Checked)
-        UpdateUserPermissionBool("EditClients", ChkPermissionCreateEditClients.Checked)
-        UpdateUserPermissionBool("EditProducts", ChkPermissionCreateEditProducts.Checked)
-        UpdateUserPermissionBool("DeleteClients", ChkPermissionDeleteClients.Checked)
-        UpdateUserPermissionBool("DeleteProducts", ChkPermissionDeleteProducts.Checked)
-        UpdateUserPermissionBool("EditLics", ChkPermissionEditLics.Checked)
-        UpdateUserPermissionBool("ExportLics", ChkPermissionExportLics.Checked)
-        UpdateUserPermissionBool("ExportKeys", ChkPermissionExportKeys.Checked)
-        UpdateUserPermissionBool("OnlyTrials", ChkPermissionOnlyTrials.Checked)
-        UpdateUserPermisionInt("MaxTrialDays", TxtMaxTrial.Text)
+        UpdateUserPermissionBool(SelectedUser, "IsAdmin", ChkPermissionAdmin.Checked)
+        UpdateUserPermissionBool(SelectedUser, "EditClients", ChkPermissionCreateEditClients.Checked)
+        UpdateUserPermissionBool(SelectedUser, "EditProducts", ChkPermissionCreateEditProducts.Checked)
+        UpdateUserPermissionBool(SelectedUser, "DeleteClients", ChkPermissionDeleteClients.Checked)
+        UpdateUserPermissionBool(SelectedUser, "DeleteProducts", ChkPermissionDeleteProducts.Checked)
+        UpdateUserPermissionBool(SelectedUser, "EditLics", ChkPermissionEditLics.Checked)
+        UpdateUserPermissionBool(SelectedUser, "ExportLics", ChkPermissionExportLics.Checked)
+        UpdateUserPermissionBool(SelectedUser, "ExportKeys", ChkPermissionExportKeys.Checked)
+        UpdateUserPermissionBool(SelectedUser, "OnlyTrials", ChkPermissionOnlyTrials.Checked)
+        UpdateUserPermisionInt(SelectedUser, "MaxTrialDays", TxtMaxTrial.Text)
     End Sub
 
     Private Sub BtnRemoveProduct_Click(sender As Object, e As EventArgs) Handles BtnRemoveProduct.Click
@@ -672,49 +597,21 @@ Public Class Mainfrm
         ' Search for the product by name
         For Each product In AllProducts
             If product.Name.Equals(productName) Then
-                productId = product.ID
+                ProductID = product.ID
                 Exit For
             End If
         Next
 
         ' Check if a valid product ID was found
-        If productId <> -1 Then
+        If ProductID <> -1 Then
             ' Confirm product deletion
             If MessageBox.Show("Are you sure you want to delete this product and all associated data?", "Confirm Delete", MessageBoxButtons.YesNo) = DialogResult.Yes Then
-                DeleteProduct(productId)
+                DeleteProductFromDatabase(ProductID)
             End If
         Else
-            MessageBox.Show(productId & "Product ID not found.")
+            MessageBox.Show(ProductID & "Product ID not found.")
         End If
         LoadProducts()
-    End Sub
-
-    Private Sub DeleteProduct(productId As Integer)
-        Dim transaction = conn.BeginTransaction()
-
-        Try
-            ' Delete from each related table
-            ExecuteDeleteCommand(conn, "DELETE FROM PrivateKeys WHERE ProductID = @ProductID", productId)
-            ExecuteDeleteCommand(conn, "DELETE FROM PublicKeys WHERE ProductID = @ProductID", productId)
-            ExecuteDeleteCommand(conn, "DELETE FROM Features WHERE ProductID = @ProductID", productId)
-            ExecuteDeleteCommand(conn, "DELETE FROM Attributes WHERE ProductID = @ProductID", productId)
-            ExecuteDeleteCommand(conn, "DELETE FROM Licenses WHERE ProductID = @ProductID", productId)
-            ExecuteDeleteCommand(conn, "DELETE FROM Products WHERE ProductID = @ProductID", productId)
-
-            transaction.Commit()
-            MessageBox.Show("Product and all associated data have been deleted successfully.")
-        Catch ex As Exception
-            transaction.Rollback()
-            MessageBox.Show("An error occurred: " & ex.Message)
-        End Try
-    End Sub
-
-    ' Helper method to execute delete commands
-    Private Sub ExecuteDeleteCommand(conn As SQLiteConnection, query As String, productId As Integer)
-        Using cmd As New SQLiteCommand(query, conn)
-            cmd.Parameters.AddWithValue("@ProductID", productId)
-            cmd.ExecuteNonQuery()
-        End Using
     End Sub
 
     Private Sub BtnDeleteClient_Click(sender As Object, e As EventArgs) Handles BtnDeleteClient.Click
